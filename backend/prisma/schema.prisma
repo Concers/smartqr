@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  qrCodes   QrCode[]
+
+  @@map("users")
+}
+
+model QrCode {
+  id           String    @id @default(cuid())
+  shortCode    String    @unique
+  originalUrl  String?
+  qrImageUrl   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  isActive     Boolean   @default(true)
+  userId       String?
+  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  destinations UrlDestination[]
+  analytics    QrAnalytics[]
+
+  @@map("qr_codes")
+}
+
+model UrlDestination {
+  id             String   @id @default(cuid())
+  qrCodeId       String
+  destinationUrl String
+  activeFrom     DateTime @default(now())
+  expiresAt      DateTime?
+  isActive       Boolean  @default(true)
+  priority       Int      @default(1)
+  qrCode         QrCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+
+  @@map("url_destinations")
+}
+
+model QrAnalytics {
+  id          String   @id @default(cuid())
+  qrCodeId    String
+  ipAddress   String?
+  userAgent   String?
+  country     String?
+  city        String?
+  deviceType  String?
+  browser     String?
+  accessedAt  DateTime @default(now())
+  qrCode      QrCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+
+  @@map("qr_analytics")
+}
