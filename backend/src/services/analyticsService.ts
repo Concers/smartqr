@@ -12,6 +12,8 @@ export class AnalyticsService {
       const deviceType = this.extractDeviceType(userAgent);
       const browser = this.extractBrowser(userAgent);
       
+      console.log(`📊 Analytics: Tracking click for QR ${qrCodeId} from IP ${ipAddress}, device: ${deviceType}, browser: ${browser}`);
+      
       // Store analytics data
       await prisma.qrAnalytics.create({
         data: {
@@ -24,6 +26,8 @@ export class AnalyticsService {
         },
       });
 
+      console.log(`✅ Analytics: Successfully saved click data for QR ${qrCodeId}`);
+
       // Increment cache counter
       await CacheService.incrementClickCount(qrCodeId);
       
@@ -31,7 +35,7 @@ export class AnalyticsService {
       await CacheService.invalidateAnalytics(qrCodeId);
       
     } catch (error) {
-      console.error('Error tracking click:', error);
+      console.error('❌ Error tracking click:', error);
     }
   }
 
@@ -56,13 +60,11 @@ export class AnalyticsService {
         uniqueVisitors,
         topCountries,
         devices,
-        dailyStats,
       ] = await Promise.all([
         this.getTotalClicks(where),
         this.getUniqueVisitors(where),
         this.getTopCountries(where),
         this.getDeviceBreakdown(where),
-        this.getDailyStats(where, query),
       ]);
 
       const analytics: AnalyticsData = {
@@ -70,7 +72,7 @@ export class AnalyticsService {
         uniqueVisitors,
         topCountries,
         devices,
-        dailyStats,
+        dailyStats: [], // QR-specific daily stats not implemented yet
       };
 
       // Cache the results
@@ -117,27 +119,76 @@ export class AnalyticsService {
     }));
   }
 
-  private static async getDailyStats(where: any, query: AnalyticsQuery): Promise<Array<{ date: string; clicks: number }>> {
-    const from = query.from ? new Date(query.from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const to = query.to ? new Date(query.to) : new Date();
+  static async getOverallStats(userId?: string): Promise<any> {
+    try {
+      const analyticsWhere = userId ? { qrCode: { userId } } : undefined;
 
-    const dailyStats = await prisma.$queryRaw`
-      SELECT 
-        DATE(accessed_at) as date,
-        COUNT(*) as clicks
-      FROM qr_analytics
-      WHERE 
-        qr_code_id = ${where.qrCodeId}
-        AND accessed_at >= ${from}
-        AND accessed_at <= ${to}
-      GROUP BY DATE(accessed_at)
-      ORDER BY date DESC
-    ` as Array<{ date: Date; clicks: bigint }>;
+      const [totalQRs, totalClicks, activeQRs, uniqueVisitors, topCountries, deviceBreakdown, browserBreakdown] = await Promise.all([
+        prisma.qrCode.count(userId ? { where: { userId } } : undefined),
+        prisma.qrAnalytics.count({ where: analyticsWhere }),
+        prisma.qrCode.count({
+          where: {
+            ...(userId ? { userId } : {}),
+            isActive: true,
+          },
+        }),
+        this.getUniqueVisitors(analyticsWhere),
+        this.getTopCountries(analyticsWhere, 5),
+        this.getDeviceBreakdown(analyticsWhere),
+        this.getBrowserBreakdown(analyticsWhere),
+      ]);
 
-    return dailyStats.map(stat => ({
-      date: stat.date.toISOString().split('T')[0],
-      clicks: Number(stat.clicks),
-    }));
+      return {
+        totalClicks,
+        uniqueVisitors,
+        topCountries,
+        deviceBreakdown: deviceBreakdown.map(d => ({ device: d.type, clicks: d.count })),
+        browserBreakdown: browserBreakdown.map(b => ({ browser: b.name, clicks: b.count })),
+      };
+    } catch (error) {
+      console.error('Error getting overall stats:', error);
+      throw new Error('Failed to get overall stats');
+    }
+  }
+
+  static async getDailyStats(userId?: string): Promise<any> {
+    try {
+      const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const to = new Date();
+
+      // Use Prisma Client instead of raw query
+      const analytics = await prisma.qrAnalytics.findMany({
+        where: {
+          accessedAt: {
+            gte: from,
+            lte: to,
+          },
+        },
+        select: {
+          accessedAt: true,
+        },
+        orderBy: {
+          accessedAt: 'desc',
+        },
+      });
+
+      // Group by date and count clicks
+      const dailyStats = analytics.reduce((acc: any, item) => {
+        const date = item.accessedAt.toISOString().split('T')[0];
+        const existing = acc.find((d: any) => d.date === date);
+        if (existing) {
+          existing.clicks += 1;
+        } else {
+          acc.push({ date, clicks: 1 });
+        }
+        return acc;
+      }, []);
+
+      return dailyStats;
+    } catch (error) {
+      console.error('Error getting daily stats:', error);
+      throw new Error('Failed to get daily stats');
+    }
   }
 
   private static extractDeviceType(userAgent: string): string {
@@ -164,30 +215,71 @@ export class AnalyticsService {
     return 'unknown';
   }
 
-  static async getOverallStats(userId?: string): Promise<any> {
+  static async getGeoStats(userId?: string): Promise<any> {
     try {
-      const analyticsWhere = userId ? { qrCode: { userId } } : undefined;
-
-      const [totalQRs, totalClicks, activeQRs] = await Promise.all([
-        prisma.qrCode.count(userId ? { where: { userId } } : undefined),
-        prisma.qrAnalytics.count({ where: analyticsWhere }),
-        prisma.qrCode.count({
-          where: {
-            ...(userId ? { userId } : {}),
-            isActive: true,
-          },
-        }),
-      ]);
-
-      return {
-        totalQRs,
-        totalClicks,
-        activeQRs,
-      };
+      // Placeholder: requires geolocation service integration
+      return [];
     } catch (error) {
-      console.error('Error getting overall stats:', error);
-      throw new Error('Failed to get overall stats');
+      console.error('Error getting geo stats:', error);
+      throw new Error('Failed to get geo stats');
     }
+  }
+
+  static async getDeviceStats(userId?: string): Promise<any> {
+    try {
+      const where = userId ? { qrCode: { userId } } : {};
+      const devices = await prisma.qrAnalytics.groupBy({
+        by: ['deviceType'],
+        where,
+        _count: {
+          deviceType: true,
+        },
+      });
+
+      return devices.map(device => ({
+        device: device.deviceType || 'unknown',
+        clicks: device._count.deviceType,
+      }));
+    } catch (error) {
+      console.error('Error getting device stats:', error);
+      throw new Error('Failed to get device stats');
+    }
+  }
+
+  static async getBrowserStats(userId?: string): Promise<any> {
+    try {
+      const where = userId ? { qrCode: { userId } } : {};
+      const browsers = await prisma.qrAnalytics.groupBy({
+        by: ['browser'],
+        where,
+        _count: {
+          browser: true,
+        },
+      });
+
+      return browsers.map(browser => ({
+        browser: browser.browser || 'unknown',
+        clicks: browser._count.browser,
+      }));
+    } catch (error) {
+      console.error('Error getting browser stats:', error);
+      throw new Error('Failed to get browser stats');
+    }
+  }
+
+  private static async getBrowserBreakdown(where: any): Promise<Array<{ name: string; count: number }>> {
+    const browsers = await prisma.qrAnalytics.groupBy({
+      by: ['browser'],
+      where,
+      _count: {
+        browser: true,
+      },
+    });
+
+    return browsers.map(browser => ({
+      name: browser.browser || 'unknown',
+      count: browser._count.browser,
+    }));
   }
 
   static async getRecentActivity(userId?: string, limit: number = 10): Promise<any> {

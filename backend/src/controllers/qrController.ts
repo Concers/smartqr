@@ -35,7 +35,13 @@ export class QRController {
 
       res.json({
         success: true,
-        data: result,
+        data: {
+          data: result.qrCodes,
+          total: result.total,
+          page: result.page,
+          limit: result.limit,
+          totalPages: result.totalPages,
+        },
       });
     } catch (error: any) {
       console.error('Get QR codes error:', error);

@@ -4,6 +4,11 @@ import { CacheService } from '@/services/cacheService';
 
 export const rateLimiter = (maxRequests: number = config.rateLimit.maxRequests, windowMs: number = config.rateLimit.windowMs) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // Skip rate limiting entirely in development
+    if (config.nodeEnv === 'development') {
+      return next();
+    }
+
     try {
       const identifier = req.ip || req.connection.remoteAddress || 'unknown';
       

@@ -47,7 +47,8 @@ if (config.nodeEnv === 'development') {
   app.use(morgan('combined'));
 }
 
-// Rate limiting
+// Rate limiting (applies to all routes except analytics)
+app.use('/api/analytics', analyticsRoutes);
 app.use(rateLimiter());
 
 // Health check endpoint
@@ -63,7 +64,6 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/qr', qrRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/analytics', analyticsRoutes);
 
 // QR code redirect endpoint (no /api prefix)
 app.get(

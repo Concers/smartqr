@@ -3,14 +3,44 @@ import { AnalyticsService } from '@/services/analyticsService';
 import { authenticateToken } from '@/middleware/auth';
 import { validateUUID, validateAnalyticsQuery } from '@/middleware/validation';
 import { analyticsRateLimiter } from '@/middleware/rateLimit';
- import prisma from '@/config/database';
+import { AnalyticsController } from '@/controllers/analyticsController';
+import prisma from '@/config/database';
 
 const router = Router();
+
+// Overall stats (dashboard overview)
+router.get('/overview',
+  authenticateToken,
+  AnalyticsController.getOverallStats
+);
+
+// Daily stats (last 7 days)
+router.get('/daily',
+  authenticateToken,
+  AnalyticsController.getDailyStats
+);
+
+// Geographic stats
+router.get('/geo',
+  authenticateToken,
+  AnalyticsController.getGeoStats
+);
+
+// Device stats
+router.get('/devices',
+  authenticateToken,
+  AnalyticsController.getDeviceStats
+);
+
+// Browser stats
+router.get('/browsers',
+  authenticateToken,
+  AnalyticsController.getBrowserStats
+);
 
 // Get analytics for specific QR code
 router.get('/:id',
   authenticateToken,
-  analyticsRateLimiter,
   validateUUID,
   validateAnalyticsQuery,
   async (req: any, res: any) => {
@@ -47,33 +77,9 @@ router.get('/:id',
   }
 );
 
-// Get overall stats for user
-router.get('/',
-  authenticateToken,
-  analyticsRateLimiter,
-  async (req: any, res: any) => {
-    try {
-      const userId = req.user?.id;
-      const stats = await AnalyticsService.getOverallStats(userId);
-
-      res.json({
-        success: true,
-        data: stats,
-      });
-    } catch (error: any) {
-      console.error('Get overall stats error:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to get overall stats',
-      });
-    }
-  }
-);
-
 // Get recent activity
 router.get('/activity/recent',
   authenticateToken,
-  analyticsRateLimiter,
   async (req: any, res: any) => {
     try {
       const userId = req.user?.id;
@@ -97,7 +103,6 @@ router.get('/activity/recent',
 // Export analytics
 router.get('/:id/export',
   authenticateToken,
-  analyticsRateLimiter,
   validateUUID,
   async (req: any, res: any) => {
     try {
