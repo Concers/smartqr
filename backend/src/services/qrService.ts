@@ -152,6 +152,13 @@ export class QRService {
         expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
       },
     });
+
+    if (data.isActive !== undefined) {
+      await prisma.qrCode.update({
+        where: { id: qrCodeId },
+        data: { isActive: data.isActive },
+      });
+    }
   }
 
   static async deleteQRCode(id: string, userId?: string): Promise<void> {
@@ -204,5 +211,30 @@ export class QRService {
     });
 
     return destination?.destinationUrl || null;
+  }
+
+  static async resolveShortCode(shortCode: string): Promise<
+    | { status: 'active'; destinationUrl: string }
+    | { status: 'inactive' | 'not_found' }
+  > {
+    const qr = await prisma.qrCode.findUnique({
+      where: { shortCode },
+      select: { id: true, isActive: true },
+    });
+
+    if (!qr) {
+      return { status: 'not_found' };
+    }
+
+    if (!qr.isActive) {
+      return { status: 'inactive' };
+    }
+
+    const destinationUrl = await this.getDestinationByShortCode(shortCode);
+    if (!destinationUrl) {
+      return { status: 'inactive' };
+    }
+
+    return { status: 'active', destinationUrl };
   }
 }

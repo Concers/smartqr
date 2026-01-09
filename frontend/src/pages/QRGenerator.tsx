@@ -70,6 +70,14 @@ export default function QRGeneratorPage() {
       });
       setStep(4);
     },
+    onError: (error: any) => {
+      // Show real error details in console for debugging
+      console.error('QR generate error:', {
+        message: error?.message,
+        status: error?.response?.status,
+        data: error?.response?.data,
+      });
+    },
   });
 
   return (
@@ -130,7 +138,23 @@ export default function QRGeneratorPage() {
 
               {mutation.isError ? (
                 <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-                  QR oluşturma hatası
+                  <div className="font-medium">
+                    {(
+                      (mutation.error as any)?.response?.data?.message ||
+                      (mutation.error as any)?.response?.data?.error ||
+                      (mutation.error as any)?.message ||
+                      'QR oluşturma hatası'
+                    )}
+                  </div>
+                  {Array.isArray((mutation.error as any)?.response?.data?.details) ? (
+                    <div className="mt-2 space-y-1 text-xs">
+                      {(mutation.error as any).response.data.details.map((d: any, i: number) => (
+                        <div key={i}>
+                          <span className="font-semibold">{d.field}:</span> {d.message}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>

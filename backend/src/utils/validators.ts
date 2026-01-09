@@ -6,12 +6,12 @@ export const qrCodeSchema = Joi.object({
     'any.required': 'Destination URL is required',
   }),
   customCode: Joi.string()
-    .alphanum()
+    .pattern(/^[a-zA-Z0-9-]+$/)
     .min(3)
     .max(20)
     .optional()
     .messages({
-      'string.alphanum': 'Custom code must contain only alphanumeric characters',
+      'string.pattern.base': 'Custom code must contain only alphanumeric characters and hyphens',
       'string.min': 'Custom code must be at least 3 characters long',
       'string.max': 'Custom code must not exceed 20 characters',
     }),
@@ -31,6 +31,7 @@ export const updateDestinationSchema = Joi.object({
   expiresAt: Joi.date().iso().optional().messages({
     'date.format': 'Expiration date must be a valid ISO date',
   }),
+  isActive: Joi.boolean().optional(),
 });
 
 export const userRegistrationSchema = Joi.object({

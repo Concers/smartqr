@@ -7,7 +7,7 @@ const appUrl = process.env.APP_URL || 'http://localhost:3000';
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
 const qrBaseUrl = nodeEnv === 'development'
   ? appUrl
-  : (process.env.QR_BASE_URL || 'https://qr.smartqr.com');
+  : (process.env.QR_BASE_URL || 'https://qr.smartqrmanager.com');
 
 export const config = {
   port: process.env.PORT || 3000,

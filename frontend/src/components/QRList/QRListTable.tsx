@@ -42,6 +42,8 @@ export function QRListTable({
 }: QRListTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  const getShortUrl = (shortCode: string) => `${window.location.origin}/${shortCode}`;
+
   const columns: Column<QRListItem>[] = useMemo(
     () => [
       {
@@ -74,6 +76,32 @@ export function QRListTable({
         render: (row) => (
           <div className="font-mono text-sm font-medium text-slate-900">{row.shortCode}</div>
         ),
+      },
+      {
+        key: 'shortUrl',
+        header: 'Kod URL',
+        render: (row) => {
+          const shortUrl = getShortUrl(row.shortCode);
+          const shortPath = `/${row.shortCode}`;
+          return (
+            <div className="min-w-[220px]">
+              <a
+                href={shortUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block max-w-[260px] truncate font-mono text-sm text-blue-600 hover:underline"
+                title={shortPath}
+              >
+                {shortPath}
+              </a>
+              <div className="mt-1 flex gap-1">
+                <Button variant="ghost" size="sm" onClick={() => window.open(shortUrl, '_blank')}>
+                  Aç
+                </Button>
+              </div>
+            </div>
+          );
+        },
       },
       {
         key: 'destinationUrl',

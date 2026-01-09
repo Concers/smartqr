@@ -43,6 +43,11 @@ router.get('/list',
   QRController.getQRCodes
 );
 
+// Public resolve endpoint: check short code status without redirect
+router.get('/resolve/:shortCode',
+  QRController.resolveShortCode
+);
+
 router.get('/:id',
   authenticateToken,
   qrRateLimiter,

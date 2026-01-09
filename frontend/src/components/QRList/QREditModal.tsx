@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from '../Common/Modal';
 import { Input } from '../Common/Input';
 import { Button } from '../Common/Button';
@@ -9,18 +9,26 @@ export type QREditModalProps = {
   item?: {
     id: string;
     destinationUrl: string;
+    expiresAt?: string;
     isActive: boolean;
   };
-  onSubmit: (values: { destinationUrl: string; isActive: boolean }) => void;
+  onSubmit: (values: { destinationUrl: string; isActive: boolean; expiresAt?: string }) => void;
   loading?: boolean;
 };
 
 export function QREditModal({ open, onClose, item, onSubmit, loading }: QREditModalProps) {
   const [destinationUrl, setDestinationUrl] = useState(item?.destinationUrl || '');
   const [isActive, setIsActive] = useState(item?.isActive ?? true);
+  const [expiresAt, setExpiresAt] = useState(item?.expiresAt || '');
+
+  useEffect(() => {
+    setDestinationUrl(item?.destinationUrl || '');
+    setIsActive(item?.isActive ?? true);
+    setExpiresAt(item?.expiresAt || '');
+  }, [item?.destinationUrl, item?.isActive, item?.expiresAt, open]);
 
   const handleSubmit = () => {
-    onSubmit({ destinationUrl, isActive });
+    onSubmit({ destinationUrl, isActive, expiresAt: expiresAt || undefined });
   };
 
   return (
@@ -30,6 +38,13 @@ export function QREditModal({ open, onClose, item, onSubmit, loading }: QREditMo
           label="Hedef URL"
           value={destinationUrl}
           onChange={(e) => setDestinationUrl(e.target.value)}
+        />
+
+        <Input
+          label="Bitiş Tarihi (opsiyonel)"
+          type="datetime-local"
+          value={expiresAt}
+          onChange={(e) => setExpiresAt(e.target.value)}
         />
 
         <label className="flex items-center gap-2 text-sm">

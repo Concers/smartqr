@@ -1,4 +1,4 @@
-# SmartQR v1.0.0 - Initial Release
+# Smart QR Manager v1.0.0 - Initial Release
 
 ## 🎉 First Release - Complete QR Code Management System
 
@@ -95,4 +95,4 @@ REACT_APP_API_URL=http://localhost:3000/api
 
 ---
 
-**SmartQR v1.0.0** - Production-ready QR code management system with analytics 🚀
+**Smart QR Manager v1.0.0** - Production-ready QR code management system with analytics 🚀

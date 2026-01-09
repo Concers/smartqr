@@ -24,6 +24,25 @@ export class QRController {
     }
   }
 
+  static async resolveShortCode(req: Request, res: Response): Promise<void> {
+    try {
+      const { shortCode } = req.params;
+
+      const result = await QRService.resolveShortCode(shortCode);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      console.error('Resolve short code error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to resolve short code',
+      });
+    }
+  }
+
   static async getQRCodes(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;
@@ -84,6 +103,12 @@ export class QRController {
     try {
       const { id } = req.params;
       const userId = req.user?.id;
+
+      console.log('Update Destination Request Logic:', {
+        id,
+        body: req.body,
+        userId
+      });
 
       await QRService.updateDestination(id, req.body, userId);
 

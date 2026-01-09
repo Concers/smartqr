@@ -35,10 +35,12 @@ export const validateShortCode = (req: Request, res: Response, next: NextFunctio
 export const validateUUID = (req: Request, res: Response, next: NextFunction): void => {
   const { id } = req.params;
 
-  if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+  // Allow UUIDs (36 chars) or CUIDs (usually 25 chars, alphanumeric)
+  // Simple check: alphanumeric + hyphens, min length 20
+  if (!id || !/^[a-zA-Z0-9-]{20,}$/.test(id)) {
     res.status(400).json({
       error: 'Invalid ID format',
-      message: 'ID must be a valid UUID',
+      message: 'ID must be a valid UUID or CUID',
     });
     return;
   }
