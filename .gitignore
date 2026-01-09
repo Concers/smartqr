@@ -116,3 +116,5 @@ prisma/migrations/dev.db*
 
 # Redis dump
 dump.rdb
+
+/smartqr-backup-20260108.zip
