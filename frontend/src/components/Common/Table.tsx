@@ -1,4 +1,13 @@
-import React from 'react';
+import React from "react"
+import { cn } from "../../lib/utils"
+import {
+  Table as ShadcnTable,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "../ui/table"
 
 export type Column<T> = {
   key: string;
@@ -15,37 +24,40 @@ export type TableProps<T> = {
 
 export function Table<T>({ columns, data, rowKey }: TableProps<T>) {
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-slate-50 text-slate-700">
-          <tr>
+    <div className="rounded-md border">
+      <ShadcnTable>
+        <TableHeader>
+          <TableRow>
             {columns.map((c) => (
-              <th key={c.key} className={["px-4 py-3 font-semibold", c.className || ''].join(' ')}>
+              <TableHead key={c.key} className={cn("font-semibold", c.className)}>
                 {c.header}
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {data.length === 0 ? (
-            <tr>
-              <td className="px-4 py-6 text-slate-500" colSpan={columns.length}>
+            <TableRow>
+              <TableCell 
+                colSpan={columns.length} 
+                className="h-24 text-center text-muted-foreground"
+              >
                 Kayıt yok
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ) : (
             data.map((row) => (
-              <tr key={rowKey(row)} className="border-t">
+              <TableRow key={rowKey(row)}>
                 {columns.map((c) => (
-                  <td key={c.key} className={["px-4 py-3", c.className || ''].join(' ')}>
+                  <TableCell key={c.key} className={c.className}>
                     {c.render(row)}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))
           )}
-        </tbody>
-      </table>
+        </TableBody>
+      </ShadcnTable>
     </div>
   );
 }

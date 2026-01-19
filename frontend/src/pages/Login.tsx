@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { Input } from '../components/Common/Input';
 import { Button } from '../components/Common/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { authService } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 
@@ -154,27 +155,35 @@ export default function LoginPage() {
           </div>
 
           {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-5">
-              <Input
-                label="E-posta Adresi"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ornek@email.com"
-                required
-                className="py-3 text-base"
-              />
-              <Input
-                label="Şifre"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="py-3 text-base"
-              />
-            </div>
+          <Card className="shadow-xl border-0">
+            <CardHeader className="space-y-1 pb-6">
+              <CardTitle className="text-2xl font-bold text-center">Giriş Yap</CardTitle>
+              <CardDescription className="text-center text-base">
+                QR kodlarınızı yönetmek için hesabınıza giriş yapın
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-5">
+                  <Input
+                    label="E-posta Adresi"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="ornek@email.com"
+                    required
+                    className="py-3 text-base"
+                  />
+                  <Input
+                    label="Şifre"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="py-3 text-base"
+                  />
+                </div>
 
             <div className="flex items-center justify-between">
               <label className="flex items-center cursor-pointer">
@@ -184,9 +193,13 @@ export default function LoginPage() {
                 />
                 <span className="ml-2 text-sm text-slate-600">Beni hatırla</span>
               </label>
-              <a href="#" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors">
+              <button 
+                type="button" 
+                className="text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors underline"
+                onClick={() => console.log('Forgot password functionality not implemented yet')}
+              >
                 Şifrenizi mi unuttunuz?
-              </a>
+              </button>
             </div>
 
             <Button
@@ -218,7 +231,9 @@ export default function LoginPage() {
                 Ücretsiz kaydolun
               </button>
             </div>
-          </form>
+              </form>
+            </CardContent>
+          </Card>
 
           {/* Demo Hesabı */}
           <div className="mt-10 p-6 bg-gradient-to-r from-emerald-50 to-slate-50 rounded-2xl border border-emerald-200">

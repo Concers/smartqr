@@ -7,6 +7,7 @@ import QRGeneratorPage from './pages/QRGenerator';
 import QRListPage from './pages/QRList';
 import AnalyticsPage from './pages/Analytics';
 import SettingsPage from './pages/Settings';
+import PricingPage from './pages/Pricing';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 import RateLimitPage from './pages/RateLimitPage';
@@ -26,6 +27,7 @@ export default function App() {
       <Route path="/qr/generate" element={<LayoutWrapper><QRGeneratorPage /></LayoutWrapper>} />
       <Route path="/qr/list" element={<LayoutWrapper><QRListPage /></LayoutWrapper>} />
       <Route path="/analytics" element={<LayoutWrapper><AnalyticsPage /></LayoutWrapper>} />
+      <Route path="/pricing" element={<PricingPage />} />
       <Route path="/settings" element={<LayoutWrapper><SettingsPage /></LayoutWrapper>} />
       {/* Auth pages - Full page without Layout */}
       <Route path="/login" element={<LoginPage />} />

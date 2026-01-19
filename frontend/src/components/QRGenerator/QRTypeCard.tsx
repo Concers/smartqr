@@ -21,16 +21,18 @@ export function QRTypeCard({
       type="button"
       onClick={() => onSelect(type.key)}
       className={[
-        'w-full rounded-xl border bg-white p-4 text-left shadow-sm transition',
-        'hover:shadow-md',
-        selected ? 'border-emerald-400 ring-2 ring-emerald-200' : 'border-slate-200',
+        'w-full rounded-2xl border-2 bg-cream p-4 text-left transition-all',
+        'hover:translate-y-0.5 hover:shadow-[2px_2px_0_0_#1F2937]',
+        selected 
+          ? 'border-yellow bg-yellow/20 shadow-[2px_2px_0_0_#1F2937]' 
+          : 'border-dark/20 hover:border-dark/40',
       ].join(' ')}
     >
-      <div className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-        <type.Icon size={18} />
+      <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-yellow shadow-[1px_1px_0_0_#1F2937]">
+        <type.Icon size={20} className="text-dark" />
       </div>
-      <div className="text-sm font-semibold text-slate-900">{type.title}</div>
-      <div className="mt-1 text-xs text-slate-500">{type.subtitle}</div>
+      <div className="text-sm font-bold text-dark">{type.title}</div>
+      <div className="mt-1 text-xs text-dark/60">{type.subtitle}</div>
     </button>
   );
 }

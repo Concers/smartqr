@@ -1,32 +1,43 @@
-import React from 'react';
+import * as React from "react"
+import { cn } from "../../lib/utils"
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   label?: string;
   error?: string;
 };
 
-export function Input({ label, error, className, id, ...props }: InputProps) {
-  const inputId = id || props.name || undefined;
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, label, error, id, ...props }, ref) => {
+    const inputId = id || props.name || undefined;
 
-  return (
-    <div className="space-y-1">
-      {label ? (
-        <label htmlFor={inputId} className="block text-sm font-medium text-slate-700">
-          {label}
-        </label>
-      ) : null}
-      <input
-        id={inputId}
-        {...props}
-        className={[
-          'h-10 w-full rounded-md border px-3 text-sm',
-          'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400',
-          'focus:outline-none focus:ring-2 focus:ring-slate-300',
-          error ? 'border-rose-300' : '',
-          className || '',
-        ].join(' ')}
-      />
-      {error ? <div className="text-sm text-rose-600">{error}</div> : null}
-    </div>
-  );
-}
+    return (
+      <div className="space-y-2">
+        {label ? (
+          <label 
+            htmlFor={inputId} 
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            {label}
+          </label>
+        ) : null}
+        <input
+          type={type}
+          id={inputId}
+          className={cn(
+            "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+            error && "border-destructive",
+            className
+          )}
+          ref={ref}
+          {...props}
+        />
+        {error ? (
+          <div className="text-sm text-destructive">{error}</div>
+        ) : null}
+      </div>
+    )
+  }
+)
+Input.displayName = "Input"
+
+export { Input }

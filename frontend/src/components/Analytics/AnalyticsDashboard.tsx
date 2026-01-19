@@ -15,34 +15,34 @@ export function AnalyticsDashboard({ data }: { data: AnalyticsOverview }) {
   const deviceBreakdown = data?.deviceBreakdown ?? [];
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
       <Chart title="Toplam Tıklamalar">
-        <div className="text-2xl font-bold text-emerald-600">{totalClicks.toLocaleString('tr-TR')}</div>
-        <div className="text-xs text-slate-500">Tüm zamanlar</div>
+        <div className="text-3xl font-bold text-yellow">{totalClicks.toLocaleString('tr-TR')}</div>
+        <div className="text-sm text-dark/60">Tüm zamanlar</div>
       </Chart>
 
       <Chart title="Benzersiz Ziyaretçiler">
-        <div className="text-2xl font-bold text-blue-600">{uniqueVisitors.toLocaleString('tr-TR')}</div>
-        <div className="text-xs text-slate-500">Farklı IP</div>
+        <div className="text-3xl font-bold text-green">{uniqueVisitors.toLocaleString('tr-TR')}</div>
+        <div className="text-sm text-dark/60">Farklı IP</div>
       </Chart>
 
       <Chart title="En Çok Tıklanan Ülkeler">
-        <div className="space-y-2">
+        <div className="space-y-3">
           {topCountries.slice(0, 5).map((c, i) => (
             <div key={i} className="flex justify-between text-sm">
-              <span className="text-slate-700">{c.country || 'Bilinmeyen'}</span>
-              <span className="font-medium text-slate-900">{c.clicks}</span>
+              <span className="text-dark/70">{c.country || 'Bilinmeyen'}</span>
+              <span className="font-bold text-dark">{c.clicks}</span>
             </div>
           ))}
         </div>
       </Chart>
 
       <Chart title="Cihaz Dağılımı">
-        <div className="space-y-2">
+        <div className="space-y-3">
           {deviceBreakdown.slice(0, 5).map((d, i) => (
             <div key={i} className="flex justify-between text-sm">
-              <span className="text-slate-700">{d.device || 'Diğer'}</span>
-              <span className="font-medium text-slate-900">{d.clicks}</span>
+              <span className="text-dark/70">{d.device || 'Diğer'}</span>
+              <span className="font-bold text-dark">{d.clicks}</span>
             </div>
           ))}
         </div>
