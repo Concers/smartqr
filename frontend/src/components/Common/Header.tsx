@@ -46,6 +46,12 @@ export function Header({ title = "Smart QR Manager", subtitle = "Profesyonel QR 
                   QR Oluştur
                 </button>
                 <button
+                  onClick={() => navigate('/qr/list')}
+                  className="text-sm font-medium text-dark hover:text-green transition-colors"
+                >
+                  QR Listesi
+                </button>
+                <button
                   onClick={() => navigate('/analytics')}
                   className="text-sm font-medium text-dark hover:text-green transition-colors"
                 >
