@@ -2,7 +2,8 @@ import { Route, Routes } from 'react-router-dom';
 
 import AdminDashboard from './pages/AdminDashboard';
 import LandingPage from './pages/LandingPage';
-import QRGeneratorPage from './pages/QRGenerator';
+import QRGenerateSelectPage from './pages/QRGenerateSelect';
+import QRGenerateTypePage from './pages/QRGenerateType';
 import QRListPage from './pages/QRList';
 import AnalyticsPage from './pages/Analytics';
 import AdminPricingPage from './pages/AdminPricing';
@@ -20,7 +21,8 @@ export default function App() {
       <Route path="/admin" element={<AdminDashboard />} />
       
       {/* Admin pages - With AdminLayout (no additional wrapper needed) */}
-      <Route path="/qr/generate" element={<QRGeneratorPage />} />
+      <Route path="/qr/generate" element={<QRGenerateSelectPage />} />
+      <Route path="/qr/generate/:type" element={<QRGenerateTypePage />} />
       <Route path="/qr/list" element={<QRListPage />} />
       <Route path="/analytics" element={<AnalyticsPage />} />
       <Route path="/pricing" element={<AdminPricingPage />} />

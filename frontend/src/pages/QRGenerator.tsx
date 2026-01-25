@@ -32,7 +32,7 @@ import { useAuth } from '../hooks/useAuth';
 import { qrService } from '../services/qrService';
 import { AdminLayout } from '../components/Layout/AdminLayout';
 
-export default function QRGeneratorPage() {
+export default function QRGeneratorPage({ initialType }: { initialType?: string }) {
   const navigate = useNavigate();
   const { isAuthenticated, logout } = useAuth();
 
@@ -45,6 +45,81 @@ export default function QRGeneratorPage() {
   const [step, setStep] = useState(1);
   const [selectedType, setSelectedType] = useState<string | null>('website');
   const [result, setResult] = useState<QRResultData | null>(null);
+
+  useEffect(() => {
+    if (!initialType) return;
+    const t = String(initialType);
+    const allowed = ['website', 'pdf', 'links', 'vcard', 'video', 'images', 'wifi'];
+    if (allowed.includes(t)) {
+      setSelectedType(t);
+      setStep(2);
+    }
+  }, [initialType]);
+
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [pdfCustomCode, setPdfCustomCode] = useState<string>('');
+  const [pdfExpiresAt, setPdfExpiresAt] = useState<string>('');
+  const [pdfError, setPdfError] = useState<string>('');
+
+  const [social, setSocial] = useState({
+    mode: 'landing' as 'landing' | 'direct',
+    directPlatform: 'instagram' as 'instagram' | 'facebook' | 'x',
+    facebook: '',
+    instagram: '',
+    x: '',
+    customCode: '',
+    expiresAt: '',
+  });
+
+  const [video, setVideo] = useState({
+    url: '',
+    customCode: '',
+    expiresAt: '',
+  });
+  const [videoError, setVideoError] = useState<string>('');
+
+  const [image, setImage] = useState({
+    mode: 'upload' as 'upload' | 'url',
+    file: null as File | null,
+    uploadedUrl: '',
+    url: '',
+    customCode: '',
+    expiresAt: '',
+  });
+  const [imageError, setImageError] = useState<string>('');
+
+  const imageUploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const res = await qrService.uploadImage(file);
+      return res.data;
+    },
+    onSuccess: (payload: any) => {
+      const url = payload?.data?.url;
+      if (typeof url === 'string' && url) {
+        setImage((s) => ({ ...s, uploadedUrl: url }));
+      } else {
+        setImageError('Görsel yükleme başarısız');
+      }
+    },
+    onError: (error: any) => {
+      setImageError(
+        error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          error?.message ||
+          'Görsel yükleme hatası'
+      );
+    },
+  });
+
+  const [wifi, setWifi] = useState({
+    ssid: '',
+    password: '',
+    security: 'WPA' as 'WPA' | 'WEP' | 'nopass',
+    hidden: false,
+    customCode: '',
+    expiresAt: '',
+  });
 
   const [vcard, setVcard] = useState({
     firstName: '',
@@ -63,6 +138,29 @@ export default function QRGeneratorPage() {
     website: '',
     customCode: '',
     expiresAt: '',
+  });
+
+  const pdfUploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const res = await qrService.uploadPdf(file);
+      return res.data;
+    },
+    onSuccess: (payload: any) => {
+      const url = payload?.data?.url;
+      if (typeof url === 'string' && url) {
+        setPdfUrl(url);
+      } else {
+        setPdfError('PDF yükleme başarısız');
+      }
+    },
+    onError: (error: any) => {
+      setPdfError(
+        error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          error?.message ||
+          'PDF yükleme hatası'
+      );
+    },
   });
 
   const vcardError = useMemo(() => {
@@ -122,6 +220,119 @@ export default function QRGeneratorPage() {
     return `data:text/vcard;charset=utf-8,${encodeURIComponent(vcardText)}`;
   };
 
+  const normalizeSocialUrl = (platform: 'facebook' | 'instagram' | 'x', raw: string) => {
+    const v = (raw || '').trim();
+    if (!v) return '';
+    if (/^https?:\/\//i.test(v)) return v;
+
+    const handle = v.replace(/^@/, '').trim();
+    if (!handle) return '';
+
+    if (platform === 'facebook') return `https://www.facebook.com/${handle}`;
+    if (platform === 'instagram') return `https://www.instagram.com/${handle}`;
+    return `https://x.com/${handle}`;
+  };
+
+  const buildSocialLandingDataUri = (links: { label: string; url: string }[]) => {
+    const safeLinks = links.filter((l) => l.url);
+    const html = `<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sosyal Medya</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0f172a;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{width:100%;max-width:420px;background:#ffffff;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden}
+    .hdr{padding:18px 18px 10px;background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff}
+    .ttl{margin:0;font-size:18px;font-weight:800}
+    .sub{margin:6px 0 0;font-size:12px;opacity:.85}
+    .btns{padding:14px 18px 18px;display:grid;gap:10px}
+    a{display:flex;align-items:center;justify-content:center;text-decoration:none;font-weight:700;border-radius:12px;padding:12px 14px;border:1px solid #e2e8f0;color:#0f172a;background:#fff}
+    a:hover{background:#f8fafc}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="hdr">
+      <h1 class="ttl">Sosyal Medya</h1>
+      <div class="sub">Bir platform seçin</div>
+    </div>
+    <div class="btns">
+      ${safeLinks.map((l) => `<a href="${l.url}">${l.label}</a>`).join('')}
+    </div>
+  </div>
+</body>
+</html>`;
+
+    return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+  };
+
+  const buildWifiPayload = (payload: { ssid: string; password: string; security: string; hidden: boolean }) => {
+    const ssid = payload.ssid;
+    const pass = payload.password;
+    const security = payload.security;
+    const hidden = payload.hidden ? 'true' : 'false';
+    return `WIFI:T:${security};S:${ssid};P:${pass};H:${hidden};;`;
+  };
+
+  const compressImage = async (file: File) => {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('File read error'));
+      reader.readAsDataURL(file);
+    });
+
+    const imgEl = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Image load error'));
+      img.src = dataUrl;
+    });
+
+    const max = 1600;
+    const w = imgEl.naturalWidth || imgEl.width;
+    const h = imgEl.naturalHeight || imgEl.height;
+    const scale = Math.min(1, max / Math.max(w, h));
+    const outW = Math.max(1, Math.round(w * scale));
+    const outH = Math.max(1, Math.round(h * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = outW;
+    canvas.height = outH;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas not supported');
+    ctx.drawImage(imgEl, 0, 0, outW, outH);
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => {
+          if (!b) reject(new Error('Compress failed'));
+          else resolve(b);
+        },
+        'image/jpeg',
+        0.75
+      );
+    });
+
+    return new File([blob], `image-${Date.now()}.jpg`, { type: 'image/jpeg' });
+  };
+
+  const isAllowedVideoUrl = (url: string) => {
+    try {
+      const u = new URL(url);
+      const host = u.hostname.toLowerCase();
+      if (host === 'youtu.be') return true;
+      if (host.endsWith('youtube.com')) return true;
+      if (host === 'vimeo.com') return true;
+      if (host.endsWith('player.vimeo.com')) return true;
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/'); // Redirect to landing page instead of login
@@ -131,7 +342,7 @@ export default function QRGeneratorPage() {
     () => [
       { key: 'website', title: 'İnternet sitesi', subtitle: 'Bir web sitesi URL\'sine bağlantı', Icon: Globe },
       { key: 'pdf', title: 'PDF', subtitle: 'PDF göster', Icon: FileText },
-      { key: 'links', title: 'Bağlantıların Listesi', subtitle: 'Birden fazla bağlantı paylaşın', Icon: LinkIcon },
+      { key: 'links', title: 'Sosyal Medya', subtitle: 'Sosyal medya hesaplarını paylaşın', Icon: LinkIcon },
       { key: 'vcard', title: 'vCard', subtitle: 'Elektronik kartvizit', Icon: UserSquare2 },
       { key: 'video', title: 'Video', subtitle: 'Bir video göster', Icon: Video },
       { key: 'images', title: 'Görseller', subtitle: 'Birden fazla görsel paylaşın', Icon: ImageIcon },
@@ -169,6 +380,18 @@ export default function QRGeneratorPage() {
       });
     },
   });
+
+  const pdfIsBusy = pdfUploadMutation.isPending || mutation.isPending;
+
+  const previewDestinationLabel = useMemo(() => {
+    const u = (result?.destinationUrl || '').trim();
+    if (!u) return '';
+    const lower = u.toLowerCase();
+    if (lower.startsWith('data:text/html')) return 'Sosyal Medya Landing (HTML)';
+    if (lower.startsWith('data:text/vcard')) return 'vCard (VCF)';
+    if (u.length <= 40) return u;
+    return `${u.slice(0, 26)}…${u.slice(-10)}`;
+  }, [result?.destinationUrl]);
 
   return (
     <AdminLayout>
@@ -370,6 +593,537 @@ export default function QRGeneratorPage() {
                       </Button>
                     </div>
                   </div>
+                ) : selectedType === 'pdf' ? (
+                  <div className="space-y-5">
+                    <div className="text-sm font-semibold text-slate-900">PDF QR Code</div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="rounded-lg border border-slate-200 bg-white p-4">
+                        <div className="text-sm font-semibold text-slate-900 mb-2">PDF Yükle</div>
+                        <input
+                          type="file"
+                          accept="application/pdf,.pdf"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0] || null;
+                            setPdfError('');
+                            setPdfUrl('');
+                            setPdfFile(null);
+                            if (!f) return;
+                            if (f.size > 3 * 1024 * 1024) {
+                              setPdfError('PDF en fazla 3MB olabilir');
+                              return;
+                            }
+                            setPdfFile(f);
+                          }}
+                          className="block w-full text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800"
+                        />
+
+                        <div className="mt-2 text-xs text-slate-500">Maksimum 3MB</div>
+
+                        <div className="mt-3 flex gap-2">
+                          <Button
+                            disabled={!pdfFile || pdfUploadMutation.isPending}
+                            onClick={() => {
+                              if (!pdfFile) return;
+                              setPdfError('');
+                              pdfUploadMutation.mutate(pdfFile);
+                            }}
+                          >
+                            {pdfUploadMutation.isPending ? 'Yükleniyor...' : 'PDF Yükle'}
+                          </Button>
+                          {pdfUrl ? (
+                            <div className="flex-1 text-xs text-emerald-700 border border-emerald-200 bg-emerald-50 rounded-lg px-3 py-2 break-all">
+                              {pdfUrl}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <Input
+                        label="Custom Code (opsiyonel)"
+                        placeholder="ornek-kod"
+                        value={pdfCustomCode}
+                        onChange={(e) => setPdfCustomCode(e.target.value)}
+                      />
+
+                      <Input
+                        label="Bitiş Tarihi (opsiyonel)"
+                        type="datetime-local"
+                        value={pdfExpiresAt}
+                        onChange={(e) => setPdfExpiresAt(e.target.value)}
+                      />
+                    </div>
+
+                    {pdfError ? (
+                      <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                        {pdfError}
+                      </div>
+                    ) : null}
+
+                    <div className="pt-2">
+                      <Button
+                        fullWidth
+                        disabled={!pdfUrl || pdfIsBusy}
+                        onClick={() => {
+                          setResult(null);
+                          mutation.mutate({
+                            destinationUrl: pdfUrl,
+                            customCode: pdfCustomCode.trim() || undefined,
+                            expiresAt: pdfExpiresAt || undefined,
+                          } as QRGeneratorFormValues);
+                        }}
+                      >
+                        {mutation.isPending ? 'Oluşturuluyor...' : 'QR Oluştur'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : selectedType === 'links' ? (
+                  <div className="space-y-5">
+                    <div className="text-sm font-semibold text-slate-900">Sosyal Medya</div>
+
+                    <div className="rounded-lg border border-slate-200 bg-white p-4">
+                      <div className="text-sm font-semibold text-slate-900">Yönlendirme</div>
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          className={`h-10 rounded-lg border text-sm font-semibold ${
+                            social.mode === 'landing'
+                              ? 'bg-slate-900 text-white border-slate-900'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                          }`}
+                          onClick={() => setSocial((s) => ({ ...s, mode: 'landing' }))}
+                        >
+                          Landing
+                        </button>
+                        <button
+                          type="button"
+                          className={`h-10 rounded-lg border text-sm font-semibold ${
+                            social.mode === 'direct'
+                              ? 'bg-slate-900 text-white border-slate-900'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                          }`}
+                          onClick={() => setSocial((s) => ({ ...s, mode: 'direct' }))}
+                        >
+                          Direkt
+                        </button>
+                      </div>
+
+                      {social.mode === 'direct' ? (
+                        <div className="mt-3">
+                          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                            Direkt platform
+                          </div>
+                          <select
+                            value={social.directPlatform}
+                            onChange={(e) =>
+                              setSocial((s) => ({ ...s, directPlatform: e.target.value as any }))
+                            }
+                            className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20"
+                          >
+                            <option value="instagram">Instagram</option>
+                            <option value="facebook">Facebook</option>
+                            <option value="x">X</option>
+                          </select>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                      <Input
+                        label="Instagram"
+                        placeholder="@kullaniciadi veya https://instagram.com/..."
+                        value={social.instagram}
+                        onChange={(e) => setSocial((s) => ({ ...s, instagram: e.target.value }))}
+                      />
+                      <Input
+                        label="Facebook"
+                        placeholder="kullaniciadi veya https://facebook.com/..."
+                        value={social.facebook}
+                        onChange={(e) => setSocial((s) => ({ ...s, facebook: e.target.value }))}
+                      />
+                      <Input
+                        label="X"
+                        placeholder="@kullaniciadi veya https://x.com/..."
+                        value={social.x}
+                        onChange={(e) => setSocial((s) => ({ ...s, x: e.target.value }))}
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Input
+                          label="Custom Code (opsiyonel)"
+                          placeholder="ornek-kod"
+                          value={social.customCode}
+                          onChange={(e) => setSocial((s) => ({ ...s, customCode: e.target.value }))}
+                        />
+                        <Input
+                          label="Bitiş Tarihi (opsiyonel)"
+                          type="datetime-local"
+                          value={social.expiresAt}
+                          onChange={(e) => setSocial((s) => ({ ...s, expiresAt: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <Button
+                        fullWidth
+                        disabled={mutation.isPending}
+                        onClick={() => {
+                          const instagramUrl = normalizeSocialUrl('instagram', social.instagram);
+                          const facebookUrl = normalizeSocialUrl('facebook', social.facebook);
+                          const xUrl = normalizeSocialUrl('x', social.x);
+
+                          const links = [
+                            { label: 'Instagram', url: instagramUrl },
+                            { label: 'Facebook', url: facebookUrl },
+                            { label: 'X', url: xUrl },
+                          ].filter((l) => l.url);
+
+                          let destinationUrl = '';
+                          if (social.mode === 'landing') {
+                            if (links.length === 0) return;
+                            destinationUrl = buildSocialLandingDataUri(links);
+                          } else {
+                            const chosen = social.directPlatform;
+                            const directUrl =
+                              chosen === 'instagram'
+                                ? instagramUrl
+                                : chosen === 'facebook'
+                                  ? facebookUrl
+                                  : xUrl;
+                            if (!directUrl) return;
+                            destinationUrl = directUrl;
+                          }
+
+                          setResult(null);
+                          mutation.mutate({
+                            destinationUrl,
+                            customCode: social.customCode.trim() || undefined,
+                            expiresAt: social.expiresAt || undefined,
+                          } as QRGeneratorFormValues);
+                        }}
+                      >
+                        {mutation.isPending ? 'Oluşturuluyor...' : 'QR Oluştur'}
+                      </Button>
+                    </div>
+
+                    <div className="rounded-md bg-slate-50 p-3 text-xs text-slate-600">
+                      <div className="font-semibold text-slate-700">Ön İzleme</div>
+                      <div className="mt-1">
+                        {social.mode === 'landing'
+                          ? 'Landing sayfası oluşturulacak (butonlu)'
+                          : `Direkt: ${social.directPlatform}`}
+                      </div>
+                    </div>
+                  </div>
+                ) : selectedType === 'video' ? (
+                  <div className="space-y-5">
+                    <div className="text-sm font-semibold text-slate-900">Video</div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                      <Input
+                        label="Video Link"
+                        placeholder="YouTube veya Vimeo linki"
+                        value={video.url}
+                        onChange={(e) => {
+                          setVideoError('');
+                          setVideo((s) => ({ ...s, url: e.target.value }));
+                        }}
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Input
+                          label="Custom Code (opsiyonel)"
+                          placeholder="ornek-kod"
+                          value={video.customCode}
+                          onChange={(e) => setVideo((s) => ({ ...s, customCode: e.target.value }))}
+                        />
+                        <Input
+                          label="Bitiş Tarihi (opsiyonel)"
+                          type="datetime-local"
+                          value={video.expiresAt}
+                          onChange={(e) => setVideo((s) => ({ ...s, expiresAt: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
+                    {videoError ? (
+                      <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                        {videoError}
+                      </div>
+                    ) : null}
+
+                    <div className="pt-2">
+                      <Button
+                        fullWidth
+                        disabled={mutation.isPending}
+                        onClick={() => {
+                          const u = video.url.trim();
+                          if (!u) {
+                            setVideoError('Video linki zorunlu');
+                            return;
+                          }
+                          if (!/^https?:\/\//i.test(u)) {
+                            setVideoError('Geçerli bir link girin (http/https)');
+                            return;
+                          }
+                          if (!isAllowedVideoUrl(u)) {
+                            setVideoError('Sadece YouTube veya Vimeo linkleri destekleniyor');
+                            return;
+                          }
+
+                          setResult(null);
+                          mutation.mutate({
+                            destinationUrl: u,
+                            customCode: video.customCode.trim() || undefined,
+                            expiresAt: video.expiresAt || undefined,
+                          } as QRGeneratorFormValues);
+                        }}
+                      >
+                        {mutation.isPending ? 'Oluşturuluyor...' : 'QR Oluştur'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : selectedType === 'images' ? (
+                  <div className="space-y-5">
+                    <div className="text-sm font-semibold text-slate-900">Görsel</div>
+
+                    <div className="rounded-lg border border-slate-200 bg-white p-4">
+                      <div className="text-sm font-semibold text-slate-900">Kaynak</div>
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          className={`h-10 rounded-lg border text-sm font-semibold ${
+                            image.mode === 'upload'
+                              ? 'bg-slate-900 text-white border-slate-900'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                          }`}
+                          onClick={() => {
+                            setImageError('');
+                            setImage((s) => ({ ...s, mode: 'upload', uploadedUrl: '', url: '' }));
+                          }}
+                        >
+                          Yükle
+                        </button>
+                        <button
+                          type="button"
+                          className={`h-10 rounded-lg border text-sm font-semibold ${
+                            image.mode === 'url'
+                              ? 'bg-slate-900 text-white border-slate-900'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                          }`}
+                          onClick={() => {
+                            setImageError('');
+                            setImage((s) => ({ ...s, mode: 'url', file: null, uploadedUrl: '' }));
+                          }}
+                        >
+                          URL
+                        </button>
+                      </div>
+
+                      {image.mode === 'upload' ? (
+                        <div className="mt-4">
+                          <div className="text-sm font-semibold text-slate-900 mb-2">Görsel Yükle</div>
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0] || null;
+                              setImageError('');
+                              setImage((s) => ({ ...s, file: null, uploadedUrl: '' }));
+                              if (!f) return;
+                              if (f.size > 3 * 1024 * 1024) {
+                                setImageError('Görsel en fazla 3MB olabilir');
+                                return;
+                              }
+                              setImage((s) => ({ ...s, file: f }));
+                            }}
+                            className="block w-full text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800"
+                          />
+                          <div className="mt-2 text-xs text-slate-500">Maksimum 3MB (yüklemeden önce sıkıştırılır)</div>
+
+                          <div className="mt-3 flex gap-2">
+                            <Button
+                              disabled={!image.file || imageUploadMutation.isPending}
+                              onClick={async () => {
+                                if (!image.file) return;
+                                setImageError('');
+                                try {
+                                  const compressed = await compressImage(image.file);
+                                  if (compressed.size > 3 * 1024 * 1024) {
+                                    setImageError('Sıkıştırma sonrası dosya hâlâ 3MB üstünde');
+                                    return;
+                                  }
+                                  imageUploadMutation.mutate(compressed);
+                                } catch (e: any) {
+                                  setImageError(e?.message || 'Sıkıştırma hatası');
+                                }
+                              }}
+                            >
+                              {imageUploadMutation.isPending ? 'Yükleniyor...' : 'Görsel Yükle'}
+                            </Button>
+                            {image.uploadedUrl ? (
+                              <div className="flex-1 text-xs text-emerald-700 border border-emerald-200 bg-emerald-50 rounded-lg px-3 py-2 break-all">
+                                {image.uploadedUrl}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-4">
+                          <Input
+                            label="Görsel URL"
+                            placeholder="https://.../image.jpg"
+                            value={image.url}
+                            onChange={(e) => {
+                              setImageError('');
+                              setImage((s) => ({ ...s, url: e.target.value }));
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Input
+                        label="Custom Code (opsiyonel)"
+                        placeholder="ornek-kod"
+                        value={image.customCode}
+                        onChange={(e) => setImage((s) => ({ ...s, customCode: e.target.value }))}
+                      />
+                      <Input
+                        label="Bitiş Tarihi (opsiyonel)"
+                        type="datetime-local"
+                        value={image.expiresAt}
+                        onChange={(e) => setImage((s) => ({ ...s, expiresAt: e.target.value }))}
+                      />
+                    </div>
+
+                    {imageError ? (
+                      <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                        {imageError}
+                      </div>
+                    ) : null}
+
+                    <div className="pt-2">
+                      <Button
+                        fullWidth
+                        disabled={mutation.isPending}
+                        onClick={() => {
+                          const destinationUrl =
+                            image.mode === 'upload' ? image.uploadedUrl : image.url.trim();
+                          if (!destinationUrl) {
+                            setImageError('Görsel zorunlu');
+                            return;
+                          }
+                          if (!/^https?:\/\//i.test(destinationUrl)) {
+                            setImageError('Geçerli bir URL olmalı (http/https)');
+                            return;
+                          }
+
+                          setResult(null);
+                          mutation.mutate({
+                            destinationUrl,
+                            customCode: image.customCode.trim() || undefined,
+                            expiresAt: image.expiresAt || undefined,
+                          } as QRGeneratorFormValues);
+                        }}
+                      >
+                        {mutation.isPending ? 'Oluşturuluyor...' : 'QR Oluştur'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : selectedType === 'wifi' ? (
+                  <div className="space-y-5">
+                    <div className="text-sm font-semibold text-slate-900">WiFi</div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                      <Input
+                        label="WiFi Adı (SSID)"
+                        placeholder="Ağ adı"
+                        value={wifi.ssid}
+                        onChange={(e) => setWifi((s) => ({ ...s, ssid: e.target.value }))}
+                      />
+                      <Input
+                        label="Şifre"
+                        placeholder="Şifre"
+                        value={wifi.password}
+                        onChange={(e) => setWifi((s) => ({ ...s, password: e.target.value }))}
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Güvenlik</div>
+                          <select
+                            value={wifi.security}
+                            onChange={(e) => setWifi((s) => ({ ...s, security: e.target.value as any }))}
+                            className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20"
+                          >
+                            <option value="WPA">WPA/WPA2</option>
+                            <option value="WEP">WEP</option>
+                            <option value="nopass">Şifresiz</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-2 pt-6">
+                          <input
+                            type="checkbox"
+                            checked={wifi.hidden}
+                            onChange={(e) => setWifi((s) => ({ ...s, hidden: e.target.checked }))}
+                            className="h-4 w-4"
+                          />
+                          <div className="text-sm text-slate-700">Gizli ağ</div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Input
+                          label="Custom Code (opsiyonel)"
+                          placeholder="ornek-kod"
+                          value={wifi.customCode}
+                          onChange={(e) => setWifi((s) => ({ ...s, customCode: e.target.value }))}
+                        />
+                        <Input
+                          label="Bitiş Tarihi (opsiyonel)"
+                          type="datetime-local"
+                          value={wifi.expiresAt}
+                          onChange={(e) => setWifi((s) => ({ ...s, expiresAt: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-md bg-slate-50 p-3 text-xs text-slate-600">
+                      <div className="font-semibold text-slate-700">Not</div>
+                      <div className="mt-1">
+                        Tarayıcılar mevcut WiFi SSID/şifre bilgisini otomatik vermez. Manuel girmeniz gerekir.
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <Button
+                        fullWidth
+                        disabled={mutation.isPending}
+                        onClick={() => {
+                          const ssid = wifi.ssid.trim();
+                          if (!ssid) return;
+                          const destinationUrl = buildWifiPayload({
+                            ssid,
+                            password: wifi.security === 'nopass' ? '' : wifi.password,
+                            security: wifi.security,
+                            hidden: wifi.hidden,
+                          });
+
+                          setResult(null);
+                          mutation.mutate({
+                            destinationUrl,
+                            customCode: wifi.customCode.trim() || undefined,
+                            expiresAt: wifi.expiresAt || undefined,
+                          } as QRGeneratorFormValues);
+                        }}
+                      >
+                        {mutation.isPending ? 'Oluşturuluyor...' : 'QR Oluştur'}
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <QRGeneratorForm
                     loading={mutation.isPending}
@@ -484,7 +1238,7 @@ export default function QRGeneratorPage() {
                       {step === 1 && "QR türü seçildiğinde önizleme burada görünecek."}
                       {step === 2 && "İçerik girildiğinde QR kodunuz burada belirecek."}
                       {step === 3 && "Tasarım ayarları burada görünecek."}
-                      {step === 4 && result && `Hedef: ${result.destinationUrl}`}
+                      {step === 4 && result && `Hedef: ${previewDestinationLabel}`}
                     </p>
                   </div>
                 </div>

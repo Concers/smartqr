@@ -1,10 +1,13 @@
 import Joi from 'joi';
 
 export const qrCodeSchema = Joi.object({
-  destinationUrl: Joi.string().uri().required().messages({
-    'string.uri': 'Destination URL must be a valid URL',
-    'any.required': 'Destination URL is required',
-  }),
+  destinationUrl: Joi.alternatives()
+    .try(Joi.string().uri(), Joi.string().pattern(/^WIFI:/i))
+    .required()
+    .messages({
+      'alternatives.match': 'Destination URL must be a valid URL',
+      'any.required': 'Destination URL is required',
+    }),
   customCode: Joi.string()
     .pattern(/^[a-zA-Z0-9-]+$/)
     .min(3)
@@ -21,10 +24,13 @@ export const qrCodeSchema = Joi.object({
 });
 
 export const updateDestinationSchema = Joi.object({
-  destinationUrl: Joi.string().uri().required().messages({
-    'string.uri': 'Destination URL must be a valid URL',
-    'any.required': 'Destination URL is required',
-  }),
+  destinationUrl: Joi.alternatives()
+    .try(Joi.string().uri(), Joi.string().pattern(/^WIFI:/i))
+    .required()
+    .messages({
+      'alternatives.match': 'Destination URL must be a valid URL',
+      'any.required': 'Destination URL is required',
+    }),
   activeFrom: Joi.date().iso().optional().messages({
     'date.format': 'Active from date must be a valid ISO date',
   }),

@@ -17,6 +17,7 @@ import './types/express';
 import qrRoutes from './routes/qr';
 import authRoutes from './routes/auth';
 import analyticsRoutes from './routes/analytics';
+import uploadsRoutes from './routes/uploads';
 import { QRController } from './controllers/qrController';
 
 const app = express();
@@ -67,6 +68,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/qr', qrRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/uploads', uploadsRoutes);
 
 // QR code redirect endpoint (no /api prefix)
 app.get(
