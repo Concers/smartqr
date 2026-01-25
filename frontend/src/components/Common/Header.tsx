@@ -1,140 +1,238 @@
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from './Button';
 import { useAuth } from '../../hooks/useAuth';
+import { 
+  LayoutDashboard, 
+  QrCode, 
+  List, 
+  BarChart3, 
+  Package, 
+  LogOut, 
+  User, 
+  Menu,
+  X 
+} from 'lucide-react';
 
 interface HeaderProps {
   title?: string;
   subtitle?: string;
 }
 
-export function Header({ title = "Smart QR Manager", subtitle = "Profesyonel QR Kod Yönetimi" }: HeaderProps) {
+export function Header({ title = "Smart QR", subtitle = "Manager" }: HeaderProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Navigasyon öğeleri
+  const navItems = [
+    { name: 'Ana Sayfa', icon: LayoutDashboard, href: '/' },
+    { name: 'QR Oluştur', icon: QrCode, href: '/qr/generate' },
+    { name: 'QR Listesi', icon: List, href: '/qr/list' },
+    { name: 'Analitikler', icon: BarChart3, href: '/analytics' },
+    { name: 'Paketler', icon: Package, href: '/pricing' },
+  ];
+
+  // Aktif sayfayı belirle
+  const getActiveItem = () => {
+    return navItems.find(item => item.href === location.pathname);
+  };
+
+  const activeItem = getActiveItem();
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-dark/10 bg-cream/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-yellow rounded-2xl flex items-center justify-center shadow-[4px_4px_0_0_#1F2937] transition-transform hover:translate-y-1">
-            <svg className="w-6 h-6 text-dark" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm8 2h2v2h-2v-2zm2-2h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2z" />
-            </svg>
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          
+          {/* Logo Bölümü */}
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-400 text-slate-900 shadow-sm shadow-yellow-200">
+              <QrCode className="h-6 w-6" />
+            </div>
+            <div className="hidden md:block">
+              <h1 className="text-lg font-bold leading-tight text-slate-900">{title}</h1>
+              <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">{subtitle}</p>
+            </div>
           </div>
-          <div className="leading-tight">
-            <div className="text-sm font-bold text-dark">{title}</div>
-            <div className="text-xs text-dark/60">{subtitle}</div>
-          </div>
-        </div>
 
-        {/* Navigation */}
-        <nav className="flex items-center gap-6">
-          {isAuthenticated ? (
-            <>
-              {/* Main Navigation */}
-              <div className="hidden md:flex items-center gap-6">
+          {/* Masaüstü Navigasyon */}
+          {isAuthenticated && (
+            <nav className="hidden md:flex items-center gap-1">
+              {navItems.map((item) => (
                 <button
-                  onClick={() => navigate('/')}
-                  className="text-sm font-medium text-dark hover:text-green transition-colors"
+                  key={item.name}
+                  onClick={() => navigate(item.href)}
+                  className={`group flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 
+                    ${activeItem?.href === item.href
+                      ? 'bg-slate-100 text-slate-900' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
                 >
-                  Ana Sayfa
+                  <span className="relative">
+                    {item.name}
+                    {/* Hover'da alt çizgi animasyonu */}
+                    <span className={`absolute -bottom-1 left-0 h-0.5 w-0 bg-yellow-400 transition-all group-hover:w-full ${activeItem?.href === item.href ? 'w-full' : ''}`}></span>
+                  </span>
                 </button>
-                <button
-                  onClick={() => navigate('/qr/generate')}
-                  className="text-sm font-medium text-dark hover:text-green transition-colors"
-                >
-                  QR Oluştur
-                </button>
-                <button
-                  onClick={() => navigate('/qr/list')}
-                  className="text-sm font-medium text-dark hover:text-green transition-colors"
-                >
-                  QR Listesi
-                </button>
-                <button
-                  onClick={() => navigate('/analytics')}
-                  className="text-sm font-medium text-dark hover:text-green transition-colors"
-                >
-                  Analitikler
-                </button>
-                <button
-                  onClick={() => navigate('/pricing')}
-                  className="text-sm font-medium text-dark hover:text-green transition-colors"
-                >
-                  Paketler
-                </button>
-              </div>
+              ))}
+            </nav>
+          )}
 
-              {/* User Menu */}
-              <div className="flex items-center gap-3">
-                <div className="hidden items-center gap-2 text-sm text-dark/70 md:flex">
-                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
-                  <span>{user?.name || user?.email}</span>
+          {/* Guest Navigation */}
+          {!isAuthenticated && (
+            <nav className="hidden md:flex items-center gap-1">
+              <button
+                onClick={() => navigate('/')}
+                className="text-sm font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50 px-3 py-2 rounded-lg transition-all duration-200"
+              >
+                Ana Sayfa
+              </button>
+              <button
+                onClick={() => navigate('/pricing')}
+                className="text-sm font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50 px-3 py-2 rounded-lg transition-all duration-200"
+              >
+                Paketler
+              </button>
+              <button
+                onClick={() => navigate('/login')}
+                className="text-sm font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50 px-3 py-2 rounded-lg transition-all duration-200"
+              >
+                Giriş Yap
+              </button>
+              <button
+                onClick={() => navigate('/register')}
+                className="text-sm font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50 px-3 py-2 rounded-lg transition-all duration-200"
+              >
+                Üye Ol
+              </button>
+            </nav>
+          )}
+
+          {/* Sağ Taraf: Kullanıcı Profili ve Çıkış */}
+          <div className="flex items-center gap-4">
+            
+            {/* Kullanıcı Bilgisi (Authenticated) */}
+            {isAuthenticated && (
+              <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-slate-200">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-100">
+                  <div className="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center text-slate-600">
+                    <User className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-sm font-medium text-slate-700">{user?.name || user?.email || 'Test Hesabı'}</span>
                 </div>
-                <Button
+                
+                {/* Modern Çıkış Butonu (Ghost Style) */}
+                <button 
                   onClick={() => {
                     logout();
                     navigate('/');
                   }}
-                  className="h-9 px-3 bg-coral text-white hover:bg-coral/90 transition-colors shadow-[2px_2px_0_0_#1F2937] active:translate-y-0.5"
+                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors" 
+                  title="Çıkış Yap"
                 >
-                  Çıkış Yap
-                </Button>
-              </div>
-
-              {/* Mobile Menu Button */}
-              <div className="md:hidden">
-                <button className="text-dark hover:text-green transition-colors">
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
+                  <LogOut className="h-5 w-5" />
                 </button>
               </div>
-            </>
-          ) : (
-            <>
-              {/* Guest Navigation */}
-              <div className="hidden md:flex items-center gap-6">
+            )}
+
+            {/* Mobil Menü Butonu */}
+            <button 
+              className="md:hidden p-2 text-slate-600"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X /> : <Menu />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobil Menü (Drawer) */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden border-t border-slate-100 bg-white">
+          <div className="space-y-1 px-4 pb-4 pt-2">
+            {isAuthenticated ? (
+              <>
+                {navItems.map((item) => (
+                  <button
+                    key={item.name}
+                    onClick={() => {
+                      navigate(item.href);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`flex items-center gap-3 block px-3 py-3 rounded-md text-base font-medium w-full text-left
+                      ${activeItem?.href === item.href
+                        ? 'bg-yellow-50 text-yellow-700' 
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      }`}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    {item.name}
+                  </button>
+                ))}
+                <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between px-3">
+                  <div className="flex items-center gap-2">
+                     <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center">
+                        <User className="h-4 w-4 text-slate-600" />
+                     </div>
+                     <span className="font-medium text-slate-700">{user?.name || user?.email || 'Test Hesabı'}</span>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      logout();
+                      navigate('/');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="text-sm font-medium text-red-600 flex items-center gap-2"
+                  >
+                    <LogOut className="h-4 w-4" /> Çıkış
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
                 <button
-                  onClick={() => navigate('/')}
-                  className="text-sm font-medium text-dark hover:text-green transition-colors"
+                  onClick={() => {
+                    navigate('/');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex items-center gap-3 block px-3 py-3 rounded-md text-base font-medium w-full text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 >
                   Ana Sayfa
                 </button>
                 <button
-                  onClick={() => navigate('/pricing')}
-                  className="text-sm font-medium text-dark hover:text-green transition-colors"
+                  onClick={() => {
+                    navigate('/pricing');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex items-center gap-3 block px-3 py-3 rounded-md text-base font-medium w-full text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 >
                   Paketler
                 </button>
                 <button
-                  onClick={() => navigate('/login')}
-                  className="text-sm font-medium text-dark hover:text-green transition-colors"
+                  onClick={() => {
+                    navigate('/login');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex items-center gap-3 block px-3 py-3 rounded-md text-base font-medium w-full text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 >
                   Giriş Yap
                 </button>
                 <button
-                  onClick={() => navigate('/register')}
-                  className="text-sm font-medium text-dark hover:text-green transition-colors"
+                  onClick={() => {
+                    navigate('/register');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex items-center gap-3 block px-3 py-3 rounded-md text-base font-medium w-full text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 >
                   Üye Ol
                 </button>
-              </div>
-
-              {/* Mobile Menu Button */}
-              <div className="md:hidden">
-                <button className="text-dark hover:text-green transition-colors">
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-              </div>
-            </>
-          )}
-        </nav>
-      </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }
