@@ -76,11 +76,11 @@ export function AdminSidebar({ className = "" }: AdminSidebarProps) {
   };
 
   const getUserName = () => {
-    return user?.name || 'Admin';
+    return user?.name || user?.email || 'Kullanıcı';
   };
 
   const getUserEmail = () => {
-    return user?.email || 'admin@smartqr.com';
+    return user?.email || '';
   };
 
   return (

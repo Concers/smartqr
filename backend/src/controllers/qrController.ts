@@ -199,6 +199,29 @@ export class QRController {
         await AnalyticsService.trackClick(qrCode.id, req);
       }
 
+      // If destination is an embedded vCard data URI, return it as a .vcf attachment
+      // This is required to reliably trigger the native "Add to Contacts" flow on mobile devices.
+      if (typeof destinationUrl === 'string' && destinationUrl.toLowerCase().startsWith('data:text/vcard')) {
+        try {
+          const commaIndex = destinationUrl.indexOf(',');
+          const meta = commaIndex >= 0 ? destinationUrl.slice(0, commaIndex) : destinationUrl;
+          const dataPart = commaIndex >= 0 ? destinationUrl.slice(commaIndex + 1) : '';
+          const isBase64 = /;base64/i.test(meta);
+
+          const vcardText = isBase64
+            ? Buffer.from(dataPart, 'base64').toString('utf8')
+            : decodeURIComponent(dataPart);
+
+          res.setHeader('Content-Type', 'text/vcard; charset=utf-8');
+          res.setHeader('Content-Disposition', 'attachment; filename="contact.vcf"');
+          res.status(200).send(vcardText);
+          return;
+        } catch (e) {
+          console.error('Failed to serve vCard attachment:', e);
+          // fall through to normal redirect
+        }
+      }
+
       // Redirect
       res.redirect(302, destinationUrl);
     } catch (error: any) {

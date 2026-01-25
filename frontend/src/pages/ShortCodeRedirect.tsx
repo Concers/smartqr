@@ -13,7 +13,7 @@ export default function ShortCodeRedirectPage() {
 
   const targetUrl = useMemo(() => {
     if (!shortCode) return null;
-    return `http://localhost:3000/${shortCode}`;
+    return `${window.location.origin}/${shortCode}`;
   }, [shortCode]);
 
   const [secondsLeft, setSecondsLeft] = useState(3);
@@ -27,7 +27,7 @@ export default function ShortCodeRedirectPage() {
 
       try {
         setStatus('loading');
-        const res = await fetch(`http://localhost:3000/api/qr/resolve/${encodeURIComponent(shortCode)}`);
+        const res = await fetch(`${window.location.origin}/api/qr/resolve/${encodeURIComponent(shortCode)}`);
         const json = await res.json();
         const st = json?.data?.status as ResolveStatus | undefined;
 

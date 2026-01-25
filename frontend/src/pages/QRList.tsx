@@ -29,12 +29,15 @@ export default function QRListPage() {
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'Website' | 'vCard'>('all');
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any | undefined>();
 
   const { data, isLoading } = useQuery({
     queryKey: ['qrList', page, search],
-    queryFn: () => qrService.list(page, 10).then((r) => r.data),
+    queryFn: () => qrService.list(page, 10, search).then((r) => r.data),
     enabled: isAuthenticated,
   });
 
@@ -61,22 +64,31 @@ export default function QRListPage() {
     },
   });
 
-  const items: any[] = (data?.data?.data || []).map((d: any) => ({
-    id: d.id,
-    name: d.shortCode || `QR-${d.id}`,
-    url: d.destinationUrl,
-    type: 'Website',
-    scans: Math.floor(Math.random() * 5000), // Placeholder data
-    status: d.isActive ? 'active' : 'paused',
-    date: new Date(d.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }),
-    shortCode: d.shortCode,
-    qrCodeUrl: d.qrCodeUrl,
-    qrCodeImageUrl: d.qrCodeImageUrl,
-    destinationUrl: d.destinationUrl,
-    createdAt: d.createdAt,
-    expiresAt: d.expiresAt,
-    isActive: d.isActive,
-  }));
+  const items: any[] = (data?.data?.data || []).map((d: any) => {
+    const destinationUrl = d.destinationUrl;
+    const isVCard = typeof destinationUrl === 'string' && destinationUrl.toLowerCase().startsWith('data:text/vcard');
+    return {
+      id: d.id,
+      name: d.shortCode || `QR-${d.id}`,
+      url: d.destinationUrl,
+      type: isVCard ? 'vCard' : 'Website',
+      status: d.isActive ? 'active' : 'paused',
+      date: new Date(d.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }),
+      shortCode: d.shortCode,
+      qrCodeUrl: d.qrCodeUrl,
+      qrCodeImageUrl: d.qrCodeImageUrl,
+      destinationUrl: d.destinationUrl,
+      createdAt: d.createdAt,
+      expiresAt: d.expiresAt,
+      isActive: d.isActive,
+    };
+  });
+
+  const filteredItems = items.filter((qr) => {
+    if (statusFilter !== 'all' && qr.status !== statusFilter) return false;
+    if (typeFilter !== 'all' && qr.type !== typeFilter) return false;
+    return true;
+  });
 
   const total = data?.data?.total || 0;
   const limit = 10;
@@ -135,9 +147,95 @@ export default function QRListPage() {
             </div>
             
             {/* Filtre Butonu */}
-            <button className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 transition-colors shadow-sm">
-              <Filter className="w-5 h-5" />
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 transition-colors shadow-sm"
+                onClick={() => setFiltersOpen((v) => !v)}
+              >
+                <Filter className="w-5 h-5" />
+              </button>
+
+              {filtersOpen ? (
+                <div className="absolute right-0 mt-2 w-72 rounded-xl border border-slate-200 bg-white shadow-lg p-3 z-10">
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Durum</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          className={`px-2 py-2 rounded-lg text-xs font-medium border ${statusFilter === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                          onClick={() => setStatusFilter('all')}
+                        >
+                          Tümü
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-2 py-2 rounded-lg text-xs font-medium border ${statusFilter === 'active' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                          onClick={() => setStatusFilter('active')}
+                        >
+                          Aktif
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-2 py-2 rounded-lg text-xs font-medium border ${statusFilter === 'paused' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                          onClick={() => setStatusFilter('paused')}
+                        >
+                          Durak
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Tür</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          className={`px-2 py-2 rounded-lg text-xs font-medium border ${typeFilter === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                          onClick={() => setTypeFilter('all')}
+                        >
+                          Tümü
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-2 py-2 rounded-lg text-xs font-medium border ${typeFilter === 'Website' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                          onClick={() => setTypeFilter('Website')}
+                        >
+                          Web
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-2 py-2 rounded-lg text-xs font-medium border ${typeFilter === 'vCard' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                          onClick={() => setTypeFilter('vCard')}
+                        >
+                          vCard
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-slate-600 hover:text-slate-900"
+                        onClick={() => {
+                          setStatusFilter('all');
+                          setTypeFilter('all');
+                        }}
+                      >
+                        Sıfırla
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-slate-600 hover:text-slate-900"
+                        onClick={() => setFiltersOpen(false)}
+                      >
+                        Kapat
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
             
             {/* Yeni Oluştur Butonu */}
             <button 
@@ -158,7 +256,6 @@ export default function QRListPage() {
                 <tr className="bg-slate-50/50 border-b border-slate-100">
                   <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">QR Detayı</th>
                   <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tür</th>
-                  <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tarama</th>
                   <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Durum</th>
                   <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tarih</th>
                   <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">İşlemler</th>
@@ -167,18 +264,18 @@ export default function QRListPage() {
               <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-500">
+                    <td colSpan={5} className="py-8 text-center text-slate-500">
                       Yükleniyor...
                     </td>
                   </tr>
-                ) : items.length === 0 ? (
+                ) : filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-500">
+                    <td colSpan={5} className="py-8 text-center text-slate-500">
                       QR kod bulunamadı.
                     </td>
                   </tr>
                 ) : (
-                  items.map((qr) => (
+                  filteredItems.map((qr) => (
                     <tr key={qr.id} className="group hover:bg-slate-50/80 transition-colors">
                       
                       {/* İsim ve URL */}
@@ -189,8 +286,11 @@ export default function QRListPage() {
                           </div>
                           <div>
                             <div className="font-bold text-slate-900 text-sm">{qr.name}</div>
-                            <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5 group/link cursor-pointer" onClick={() => handleCopyUrl(qr.url)}>
-                              <span className="truncate max-w-[150px]">{qr.url}</span>
+                            <div
+                              className="flex items-center gap-2 text-xs text-slate-500 mt-0.5 group/link cursor-pointer"
+                              onClick={() => handleCopyUrl(qr.type === 'vCard' ? qr.qrCodeUrl : qr.url)}
+                            >
+                              <span className="truncate max-w-[150px]">{qr.type === 'vCard' ? qr.qrCodeUrl : qr.url}</span>
                               <Copy className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity hover:text-yellow-600" />
                             </div>
                           </div>
@@ -202,12 +302,6 @@ export default function QRListPage() {
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
                           {qr.type}
                         </span>
-                      </td>
-
-                      {/* Tarama Sayısı */}
-                      <td className="py-4 px-6">
-                        <div className="text-sm font-semibold text-slate-900">{qr.scans.toLocaleString()}</div>
-                        <div className="text-[10px] text-slate-400">Görüntülenme</div>
                       </td>
 
                       {/* Durum (Badge) */}
@@ -311,6 +405,7 @@ export default function QRListPage() {
         <QREditModal
           item={editingItem}
           open={editModalOpen}
+          loading={updateMutation.isPending}
           onClose={() => {
             setEditModalOpen(false);
             setEditingItem(undefined);

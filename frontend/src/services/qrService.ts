@@ -3,7 +3,7 @@ import { api } from './api';
 export const qrService = {
   generate: async (destinationUrl: string, customCode?: string, expiresAt?: string) =>
     api.post('/qr/generate', { destinationUrl, customCode, expiresAt }),
-  list: async (page = 1, limit = 10) => api.get('/qr/list', { params: { page, limit } }),
+  list: async (page = 1, limit = 10, search?: string) => api.get('/qr/list', { params: { page, limit, search } }),
   updateDestination: async (id: string, destinationUrl: string, activeFrom?: string, isActive?: boolean, expiresAt?: string) =>
     api.put(`/qr/${id}/destination`, { destinationUrl, activeFrom, isActive, expiresAt }),
   toggleActive: async (id: string, active: boolean) =>

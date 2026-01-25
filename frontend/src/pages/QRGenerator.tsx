@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '../components/Common/Button';
+import { Input } from '../components/Common/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { QRGeneratorForm, QRGeneratorFormValues } from '../components/QRGenerator/QRGeneratorForm';
 import { QRResult, QRResultData } from '../components/QRGenerator/QRResult';
@@ -44,6 +45,82 @@ export default function QRGeneratorPage() {
   const [step, setStep] = useState(1);
   const [selectedType, setSelectedType] = useState<string | null>('website');
   const [result, setResult] = useState<QRResultData | null>(null);
+
+  const [vcard, setVcard] = useState({
+    firstName: '',
+    lastName: '',
+    mobile: '',
+    phone: '',
+    fax: '',
+    email: '',
+    company: '',
+    job: '',
+    street: '',
+    city: '',
+    zip: '',
+    state: '',
+    country: '',
+    website: '',
+    customCode: '',
+    expiresAt: '',
+  });
+
+  const vcardError = useMemo(() => {
+    if (selectedType !== 'vcard') return undefined;
+    const hasName = !!(vcard.firstName.trim() || vcard.lastName.trim());
+    const hasContact = !!(vcard.email.trim() || vcard.mobile.trim() || vcard.phone.trim());
+    if (!hasName) return 'İsim alanı zorunlu (Ad veya Soyad)';
+    if (!hasContact) return 'İletişim alanı zorunlu (E‑posta veya Telefon)';
+    return undefined;
+  }, [selectedType, vcard]);
+
+  const buildVCardDataUri = () => {
+    const first = vcard.firstName.trim();
+    const last = vcard.lastName.trim();
+
+    const lines: string[] = ['BEGIN:VCARD', 'VERSION:3.0'];
+
+    const nValue = `${last};${first};;;`;
+    lines.push(`N:${nValue}`);
+
+    const fnValue = `${first}${first && last ? ' ' : ''}${last}`.trim();
+    if (fnValue) lines.push(`FN:${fnValue}`);
+
+    const company = vcard.company.trim();
+    if (company) lines.push(`ORG:${company}`);
+
+    const job = vcard.job.trim();
+    if (job) lines.push(`TITLE:${job}`);
+
+    const mobile = vcard.mobile.trim();
+    if (mobile) lines.push(`TEL;TYPE=CELL:${mobile}`);
+
+    const phone = vcard.phone.trim();
+    if (phone) lines.push(`TEL;TYPE=WORK:${phone}`);
+
+    const fax = vcard.fax.trim();
+    if (fax) lines.push(`TEL;TYPE=FAX:${fax}`);
+
+    const email = vcard.email.trim();
+    if (email) lines.push(`EMAIL:${email}`);
+
+    const street = vcard.street.trim();
+    const city = vcard.city.trim();
+    const state = vcard.state.trim();
+    const zip = vcard.zip.trim();
+    const country = vcard.country.trim();
+    if (street || city || state || zip || country) {
+      lines.push(`ADR;TYPE=WORK:;;${street};${city};${state};${zip};${country}`);
+    }
+
+    const website = vcard.website.trim();
+    if (website) lines.push(`URL:${website}`);
+
+    lines.push('END:VCARD');
+
+    const vcardText = lines.join('\n');
+    return `data:text/vcard;charset=utf-8,${encodeURIComponent(vcardText)}`;
+  };
 
   const handleLogout = () => {
     logout();
@@ -147,13 +224,161 @@ export default function QRGeneratorPage() {
           {step === 2 ? (
             <>
               <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-                <QRGeneratorForm
-                  loading={mutation.isPending}
-                  onSubmit={(values) => {
-                    setResult(null);
-                    mutation.mutate(values);
-                  }}
-                />
+                {selectedType === 'vcard' ? (
+                  <div className="space-y-5">
+                    <div className="text-sm font-semibold text-slate-900">vCard QR Code</div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Input
+                          label="Ad"
+                          placeholder="First name"
+                          value={vcard.firstName}
+                          onChange={(e) => setVcard((s) => ({ ...s, firstName: e.target.value }))}
+                        />
+                        <Input
+                          label="Soyad"
+                          placeholder="Last name"
+                          value={vcard.lastName}
+                          onChange={(e) => setVcard((s) => ({ ...s, lastName: e.target.value }))}
+                        />
+                      </div>
+
+                      <Input
+                        label="Mobil"
+                        placeholder="Mobile"
+                        value={vcard.mobile}
+                        onChange={(e) => setVcard((s) => ({ ...s, mobile: e.target.value }))}
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Input
+                          label="Telefon"
+                          placeholder="Phone"
+                          value={vcard.phone}
+                          onChange={(e) => setVcard((s) => ({ ...s, phone: e.target.value }))}
+                        />
+                        <Input
+                          label="Fax"
+                          placeholder="Fax"
+                          value={vcard.fax}
+                          onChange={(e) => setVcard((s) => ({ ...s, fax: e.target.value }))}
+                        />
+                      </div>
+
+                      <Input
+                        label="E‑posta"
+                        placeholder="your@email.com"
+                        value={vcard.email}
+                        onChange={(e) => setVcard((s) => ({ ...s, email: e.target.value }))}
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Input
+                          label="Şirket"
+                          placeholder="Company"
+                          value={vcard.company}
+                          onChange={(e) => setVcard((s) => ({ ...s, company: e.target.value }))}
+                        />
+                        <Input
+                          label="Ünvan"
+                          placeholder="Your Job"
+                          value={vcard.job}
+                          onChange={(e) => setVcard((s) => ({ ...s, job: e.target.value }))}
+                        />
+                      </div>
+
+                      <Input
+                        label="Adres"
+                        placeholder="Street"
+                        value={vcard.street}
+                        onChange={(e) => setVcard((s) => ({ ...s, street: e.target.value }))}
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Input
+                          label="Şehir"
+                          placeholder="City"
+                          value={vcard.city}
+                          onChange={(e) => setVcard((s) => ({ ...s, city: e.target.value }))}
+                        />
+                        <Input
+                          label="Posta Kodu"
+                          placeholder="ZIP"
+                          value={vcard.zip}
+                          onChange={(e) => setVcard((s) => ({ ...s, zip: e.target.value }))}
+                        />
+                      </div>
+
+                      <Input
+                        label="Eyalet"
+                        placeholder="State"
+                        value={vcard.state}
+                        onChange={(e) => setVcard((s) => ({ ...s, state: e.target.value }))}
+                      />
+
+                      <Input
+                        label="Ülke"
+                        placeholder="Country"
+                        value={vcard.country}
+                        onChange={(e) => setVcard((s) => ({ ...s, country: e.target.value }))}
+                      />
+
+                      <Input
+                        label="Website"
+                        placeholder="www.your-website.com"
+                        value={vcard.website}
+                        onChange={(e) => setVcard((s) => ({ ...s, website: e.target.value }))}
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Input
+                          label="Custom Code (opsiyonel)"
+                          placeholder="ornek-kod"
+                          value={vcard.customCode}
+                          onChange={(e) => setVcard((s) => ({ ...s, customCode: e.target.value }))}
+                        />
+                        <Input
+                          label="Bitiş Tarihi (opsiyonel)"
+                          type="datetime-local"
+                          value={vcard.expiresAt}
+                          onChange={(e) => setVcard((s) => ({ ...s, expiresAt: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
+                    {vcardError ? (
+                      <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                        {vcardError}
+                      </div>
+                    ) : null}
+
+                    <div className="pt-2">
+                      <Button
+                        fullWidth
+                        disabled={!!vcardError || mutation.isPending}
+                        onClick={() => {
+                          setResult(null);
+                          mutation.mutate({
+                            destinationUrl: buildVCardDataUri(),
+                            customCode: vcard.customCode.trim() || undefined,
+                            expiresAt: vcard.expiresAt || undefined,
+                          } as QRGeneratorFormValues);
+                        }}
+                      >
+                        {mutation.isPending ? 'Oluşturuluyor...' : 'QR Oluştur'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <QRGeneratorForm
+                    loading={mutation.isPending}
+                    onSubmit={(values) => {
+                      setResult(null);
+                      mutation.mutate(values);
+                    }}
+                  />
+                )}
 
                 <div className="flex gap-3">
                   <button 

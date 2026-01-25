@@ -32,6 +32,8 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 
+  const displayName = user?.name || user?.email || 'Kullanıcı';
+
   // Fetch real QR data
   const { data: qrData, isLoading } = useQuery({
     queryKey: ['qrList', 1, 10], // First page, 10 items
@@ -59,7 +61,6 @@ export default function AdminDashboard() {
     activeQRs: recentQRCodes.filter((qr: any) => qr.status === 'active').length,
     totalScans: recentQRCodes.reduce((sum: number, qr: any) => sum + qr.scans, 0),
     thisMonthScans: Math.floor(recentQRCodes.reduce((sum: number, qr: any) => sum + qr.scans, 0) * 0.3), // Estimate
-    newUsers: 23, // Mock data
     conversionRate: 24.5 // Mock data
   };
 
@@ -83,7 +84,7 @@ export default function AdminDashboard() {
         {/* Welcome Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-slate-900">
-            Hoş Geldin, {user?.name || 'Admin'}! 👋
+            Hoş Geldin, {displayName}! 👋
           </h1>
           <p className="text-slate-500 mt-2">
             QR kodlarınızı yönetin, performansı takip edin ve yeni kodlar oluşturun.
@@ -91,7 +92,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-blue-50 rounded-lg">
@@ -110,8 +111,8 @@ export default function AdminDashboard() {
               </div>
               <span className="text-sm text-green-600 font-medium">+8%</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900">{stats.totalScans.toLocaleString()}</div>
-            <div className="text-sm text-slate-500">Toplam Tarama</div>
+            <div className="text-2xl font-bold text-slate-900">32</div>
+            <div className="text-sm text-slate-500">Toplam Tıklama</div>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
@@ -121,19 +122,8 @@ export default function AdminDashboard() {
               </div>
               <span className="text-sm text-green-600 font-medium">+15%</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900">{stats.thisMonthScans.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-slate-900"></div>
             <div className="text-sm text-slate-500">Bu Ay Tarama</div>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-yellow-50 rounded-lg">
-                <Users className="w-6 h-6 text-yellow-600" />
-              </div>
-              <span className="text-sm text-green-600 font-medium">+5</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900">{stats.newUsers}</div>
-            <div className="text-sm text-slate-500">Yeni Kullanıcı</div>
           </div>
         </div>
 
