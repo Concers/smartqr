@@ -1,8 +1,91 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Download, Link as LinkIcon, Calendar, Code, ChevronRight, QrCode } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-export default function ModernQRGenerator() {
-  const [url, setUrl] = useState('');
+import {
+  FileText,
+  Globe,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  UserSquare2,
+  Video,
+  Wifi,
+  ArrowLeft,
+  Download,
+  Calendar,
+  Code,
+  ChevronRight,
+  QrCode,
+} from 'lucide-react';
+
+import { Button } from '../components/Common/Button';
+import { Header } from '../components/Common/Header';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { QRGeneratorForm, QRGeneratorFormValues } from '../components/QRGenerator/QRGeneratorForm';
+import { QRResult, QRResultData } from '../components/QRGenerator/QRResult';
+import { PhonePreview } from '../components/QRGenerator/PhonePreview';
+import { QRType, QRTypeCard } from '../components/QRGenerator/QRTypeCard';
+import { Stepper } from '../components/QRGenerator/Stepper';
+import { useAuth } from '../hooks/useAuth';
+import { qrService } from '../services/qrService';
+
+export default function QRGeneratorPage() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
+
+  const [step, setStep] = useState(1);
+  const [selectedType, setSelectedType] = useState<string | null>('website');
+  const [result, setResult] = useState<QRResultData | null>(null);
+
+  const types: QRType[] = useMemo(
+    () => [
+      { key: 'website', title: 'İnternet sitesi', subtitle: 'Bir web sitesi URL\'sine bağlantı', Icon: Globe },
+      { key: 'pdf', title: 'PDF', subtitle: 'PDF göster', Icon: FileText },
+      { key: 'links', title: 'Bağlantıların Listesi', subtitle: 'Birden fazla bağlantı paylaşın', Icon: LinkIcon },
+      { key: 'vcard', title: 'vCard', subtitle: 'Elektronik kartvizit', Icon: UserSquare2 },
+      { key: 'video', title: 'Video', subtitle: 'Bir video göster', Icon: Video },
+      { key: 'images', title: 'Görseller', subtitle: 'Birden fazla görsel paylaşın', Icon: ImageIcon },
+      { key: 'wifi', title: 'WiFi', subtitle: 'Bir Wi‑Fi ağına bağlanın', Icon: Wifi },
+    ],
+    []
+  );
+
+  const selectedTypeTitle = useMemo(
+    () => types.find((t) => t.key === selectedType)?.title,
+    [selectedType, types]
+  );
+
+  const mutation = useMutation({
+    mutationFn: async (values: QRGeneratorFormValues) => {
+      const res = await qrService.generate(values.destinationUrl, values.customCode, values.expiresAt);
+      return res.data;
+    },
+    onSuccess: (payload: any) => {
+      const d = payload?.data;
+      if (!d) return;
+      setResult({
+        shortCode: d.shortCode,
+        qrCodeUrl: d.qrCodeUrl,
+        qrCodeImageUrl: d.qrCodeImageUrl,
+        destinationUrl: d.destinationUrl,
+      });
+      setStep(4);
+    },
+    onError: (error: any) => {
+      console.error('QR generate error:', {
+        message: error?.message,
+        status: error?.response?.status,
+        data: error?.response?.data,
+      });
+    },
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-yellow-200">
@@ -18,13 +101,13 @@ export default function ModernQRGenerator() {
               <p className="text-xs text-slate-500 font-medium">Akıllı QR Çözümleri</p>
             </div>
           </div>
-          {/* Stepper (Simplified) */}
+          {/* Stepper */}
           <div className="hidden md:flex items-center gap-2 text-sm">
-             <span className="text-slate-400">Tür Seç</span>
+             <span className={`${step === 1 ? 'bg-yellow-100 text-yellow-800' : 'text-slate-400'} px-3 py-1 rounded-full font-medium`}>Tür Seç</span>
              <ChevronRight className="w-4 h-4 text-slate-300" />
-             <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-medium">İçerik</span>
+             <span className={`${step === 2 ? 'bg-yellow-100 text-yellow-800' : 'text-slate-400'} px-3 py-1 rounded-full font-medium`}>İçerik</span>
              <ChevronRight className="w-4 h-4 text-slate-300" />
-             <span className="text-slate-400">Tasarla</span>
+             <span className={`${step === 3 ? 'bg-yellow-100 text-yellow-800' : 'text-slate-400'} px-3 py-1 rounded-full font-medium`}>Tasarla</span>
           </div>
         </div>
       </header>
@@ -33,67 +116,143 @@ export default function ModernQRGenerator() {
         
         {/* SOL PANEL: Form Alanı */}
         <div className="lg:col-span-7 space-y-8">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold text-slate-800">İçeriğinizi Ekleyin</h2>
-            <p className="text-slate-500">QR kodunuzun yönlendireceği hedefi ve detayları belirleyin.</p>
-          </div>
-
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-            
-            {/* URL Input Group */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                <LinkIcon className="w-4 h-4" /> Hedef URL
-              </label>
-              <input 
-                type="url" 
-                placeholder="https://ornek-websitesi.com" 
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all outline-none"
-                onChange={(e) => setUrl(e.target.value)}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Custom Code */}
+          {step === 1 ? (
+            <>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <Code className="w-4 h-4" /> Özel Kod (Opsiyonel)
-                </label>
-                <input 
-                  type="text" 
-                  placeholder="kampanya-2024" 
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all outline-none"
-                />
+                <h2 className="text-3xl font-bold text-slate-800">Bir QR türü seçin</h2>
+                <p className="text-slate-500">QR kodunuzun türünü seçin ve içerik oluşturmaya başlayın.</p>
               </div>
 
-              {/* Date Picker */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <Calendar className="w-4 h-4" /> Bitiş Tarihi
-                </label>
-                <input 
-                  type="date" 
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all outline-none text-slate-500"
-                />
+              <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {types.map((t) => (
+                    <div
+                      key={t.key}
+                      onClick={() => setSelectedType(t.key)}
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        selectedType === t.key
+                          ? 'border-yellow-400 bg-yellow-50'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
+                    >
+                      <t.Icon className="w-8 h-8 text-slate-700 mb-3" />
+                      <h3 className="font-semibold text-slate-900">{t.title}</h3>
+                      <p className="text-sm text-slate-500 mt-1">{t.subtitle}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setStep(2)}
+                    disabled={!selectedType}
+                    className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-slate-200 transition-transform active:scale-[0.98] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Devam
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
-            </div>
+            </>
+          ) : null}
 
-            <div className="pt-4">
-               <button className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg shadow-slate-200 transition-transform active:scale-[0.98] flex items-center justify-center gap-2">
-                 QR Kodu Oluştur
-                 <ChevronRight className="w-5 h-5" />
-               </button>
-            </div>
-          </div>
+          {step === 2 ? (
+            <>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold text-slate-800">İçeriğinizi Ekleyin</h2>
+                <p className="text-slate-500">QR kodunuzun yönlendireceği hedefi ve detayları belirleyin.</p>
+              </div>
 
-          <div className="flex items-center justify-between pt-4">
-            <button className="text-slate-500 font-medium hover:text-slate-800 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors">
-              <ArrowLeft className="w-4 h-4" /> Geri Dön
-            </button>
-            <button className="text-slate-500 font-medium hover:text-slate-800 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors">
-              Tasarımı Atla
-            </button>
-          </div>
+              <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
+                <QRGeneratorForm
+                  loading={mutation.isPending}
+                  onSubmit={(values) => {
+                    setResult(null);
+                    mutation.mutate(values);
+                  }}
+                />
+
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setStep(1)}
+                    className="text-slate-500 font-medium hover:text-slate-800 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Geri Dön
+                  </button>
+                  <button 
+                    onClick={() => setStep(3)}
+                    className="text-slate-500 font-medium hover:text-slate-800 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    Tasarıma geç
+                  </button>
+                </div>
+
+                {mutation.isError ? (
+                  <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-600 mt-4">
+                    <div className="font-bold">
+                      {(
+                        (mutation.error as any)?.response?.data?.message ||
+                        (mutation.error as any)?.response?.data?.error ||
+                        (mutation.error as any)?.message ||
+                        'QR oluşturma hatası'
+                      )}
+                    </div>
+                    {Array.isArray((mutation.error as any)?.response?.data?.details) ? (
+                      <div className="mt-2 space-y-1 text-xs">
+                        {(mutation.error as any).response.data.details.map((d: any, i: number) => (
+                          <div key={i}>
+                            <span className="font-semibold">{d.field}:</span> {d.message}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </>
+          ) : null}
+
+          {step === 3 ? (
+            <>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold text-slate-800">QR kodunu tasarlayın</h2>
+                <p className="text-slate-500">QR kodunuzun görünümünü özelleştirin.</p>
+              </div>
+
+              <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                <div className="text-slate-500">
+                  Bu adım şimdilik placeholder. Bir sonraki aşamada renk/logo/çerçeve gibi ayarları ekleyeceğiz.
+                </div>
+                <div className="flex gap-3 mt-6">
+                  <button 
+                    onClick={() => setStep(2)}
+                    className="text-slate-500 font-medium hover:text-slate-800 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Geri Dön
+                  </button>
+                  <button 
+                    onClick={() => setStep(2)}
+                    className="bg-yellow-400 text-slate-900 font-bold py-3 px-6 rounded-xl flex items-center gap-2"
+                  >
+                    İçeriğe dön
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : null}
+
+          {step === 4 && result ? (
+            <>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold text-slate-800">QR Kodunuz Hazır!</h2>
+                <p className="text-slate-500">QR kodunuz başarıyla oluşturuldu.</p>
+              </div>
+
+              <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                <QRResult data={result} />
+              </div>
+            </>
+          ) : null}
         </div>
 
         {/* SAĞ PANEL: Canlı Önizleme */}
@@ -112,26 +271,34 @@ export default function ModernQRGenerator() {
                   
                   <div className="w-64 h-64 bg-white rounded-3xl shadow-xl flex items-center justify-center border border-slate-100 p-4">
                     {/* Placeholder for QR */}
-                    <div className="w-full h-full bg-slate-900 rounded-2xl flex items-center justify-center text-white/20">
-                      <QrCode className="w-24 h-24 opacity-20" />
-                    </div>
+                    {result?.qrCodeImageUrl ? (
+                      <img src={result.qrCodeImageUrl} alt="QR" className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="w-full h-full bg-slate-900 rounded-2xl flex items-center justify-center text-white/20">
+                        <QrCode className="w-24 h-24 opacity-20" />
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
                     <h3 className="text-lg font-bold text-slate-800">Canlı Önizleme</h3>
                     <p className="text-slate-400 text-sm">
-                      {url ? "Hedef: " + url : "Bağlantı girildiğinde QR kodunuz burada belirecek."}
+                      {step === 1 && "QR türü seçildiğinde önizleme burada görünecek."}
+                      {step === 2 && "İçerik girildiğinde QR kodunuz burada belirecek."}
+                      {step === 3 && "Tasarım ayarları burada görünecek."}
+                      {step === 4 && result && `Hedef: ${result.destinationUrl}`}
                     </p>
                   </div>
                 </div>
 
                 {/* Mockup Bottom Action */}
-                <div className="p-6 bg-white border-t border-slate-100">
-                  <button className="w-full bg-yellow-400 text-slate-900 font-bold py-3 rounded-xl flex items-center justify-center gap-2">
-                    <Download className="w-4 h-4" /> İndir (PNG)
-                  </button>
-                </div>
-
+                {step === 4 && result ? (
+                  <div className="p-6 bg-white border-t border-slate-100">
+                    <button className="w-full bg-yellow-400 text-slate-900 font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+                      <Download className="w-4 h-4" /> İndir (PNG)
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
