@@ -17,10 +17,10 @@ import {
   Code,
   ChevronRight,
   QrCode,
+  LogOut,
 } from 'lucide-react';
 
 import { Button } from '../components/Common/Button';
-import { Header } from '../components/Common/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { QRGeneratorForm, QRGeneratorFormValues } from '../components/QRGenerator/QRGeneratorForm';
 import { QRResult, QRResultData } from '../components/QRGenerator/QRResult';
@@ -29,10 +29,11 @@ import { QRType, QRTypeCard } from '../components/QRGenerator/QRTypeCard';
 import { Stepper } from '../components/QRGenerator/Stepper';
 import { useAuth } from '../hooks/useAuth';
 import { qrService } from '../services/qrService';
+import { AdminLayout } from '../components/Layout/AdminLayout';
 
 export default function QRGeneratorPage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -43,6 +44,11 @@ export default function QRGeneratorPage() {
   const [step, setStep] = useState(1);
   const [selectedType, setSelectedType] = useState<string | null>('website');
   const [result, setResult] = useState<QRResultData | null>(null);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/'); // Redirect to landing page instead of login
+  };
 
   const types: QRType[] = useMemo(
     () => [
@@ -88,41 +94,23 @@ export default function QRGeneratorPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-yellow-200">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 py-4">
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-yellow-400 p-2 rounded-lg">
-              <QrCode className="w-6 h-6 text-slate-900" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-slate-900">QR Kod Oluştur</h1>
-              <p className="text-xs text-slate-500 font-medium">Akıllı QR Çözümleri</p>
-            </div>
-          </div>
-          {/* Stepper */}
-          <div className="hidden md:flex items-center gap-2 text-sm">
-             <span className={`${step === 1 ? 'bg-yellow-100 text-yellow-800' : 'text-slate-400'} px-3 py-1 rounded-full font-medium`}>Tür Seç</span>
-             <ChevronRight className="w-4 h-4 text-slate-300" />
-             <span className={`${step === 2 ? 'bg-yellow-100 text-yellow-800' : 'text-slate-400'} px-3 py-1 rounded-full font-medium`}>İçerik</span>
-             <ChevronRight className="w-4 h-4 text-slate-300" />
-             <span className={`${step === 3 ? 'bg-yellow-100 text-yellow-800' : 'text-slate-400'} px-3 py-1 rounded-full font-medium`}>Tasarla</span>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-12 gap-12">
+    <AdminLayout>
+      <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-yellow-200 relative">
+        {/* Floating Logout Button (Backup) */}
+        <button
+          onClick={handleLogout}
+          className="fixed top-4 right-4 z-50 p-3 bg-white border border-slate-200 rounded-lg shadow-lg hover:bg-slate-50 transition-colors lg:hidden"
+          title="Çıkış Yap"
+        >
+          <LogOut className="w-5 h-5 text-slate-600" />
+        </button>
+        
+        <main className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-12 gap-12">
         
         {/* SOL PANEL: Form Alanı */}
         <div className="lg:col-span-7 space-y-8">
           {step === 1 ? (
             <>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bold text-slate-800">Bir QR türü seçin</h2>
-                <p className="text-slate-500">QR kodunuzun türünü seçin ve içerik oluşturmaya başlayın.</p>
-              </div>
-
               <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {types.map((t) => (
@@ -158,11 +146,6 @@ export default function QRGeneratorPage() {
 
           {step === 2 ? (
             <>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bold text-slate-800">İçeriğinizi Ekleyin</h2>
-                <p className="text-slate-500">QR kodunuzun yönlendireceği hedefi ve detayları belirleyin.</p>
-              </div>
-
               <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
                 <QRGeneratorForm
                   loading={mutation.isPending}
@@ -214,11 +197,6 @@ export default function QRGeneratorPage() {
 
           {step === 3 ? (
             <>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bold text-slate-800">QR kodunu tasarlayın</h2>
-                <p className="text-slate-500">QR kodunuzun görünümünü özelleştirin.</p>
-              </div>
-
               <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
                 <div className="text-slate-500">
                   Bu adım şimdilik placeholder. Bir sonraki aşamada renk/logo/çerçeve gibi ayarları ekleyeceğiz.
@@ -243,11 +221,6 @@ export default function QRGeneratorPage() {
 
           {step === 4 && result ? (
             <>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bold text-slate-800">QR Kodunuz Hazır!</h2>
-                <p className="text-slate-500">QR kodunuz başarıyla oluşturuldu.</p>
-              </div>
-
               <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
                 <QRResult data={result} />
               </div>
@@ -324,6 +297,22 @@ export default function QRGeneratorPage() {
         </div>
 
       </main>
-    </div>
+
+      {/* Navigation */}
+      <nav className="bg-white border-t border-slate-200 fixed bottom-0 left-0 right-0">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-center">
+            <div className="flex items-center gap-2 text-sm">
+               <span className={`${step === 1 ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' : 'text-slate-400'} px-4 py-2 rounded-lg font-medium transition-colors`}>Tür Seç</span>
+               <ChevronRight className="w-4 h-4 text-slate-300" />
+               <span className={`${step === 2 ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' : 'text-slate-400'} px-4 py-2 rounded-lg font-medium transition-colors`}>İçerik</span>
+               <ChevronRight className="w-4 h-4 text-slate-300" />
+               <span className={`${step === 3 ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' : 'text-slate-400'} px-4 py-2 rounded-lg font-medium transition-colors`}>Tasarla</span>
+            </div>
+          </div>
+        </div>
+      </nav>
+      </div>
+    </AdminLayout>
   );
 }

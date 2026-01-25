@@ -12,16 +12,19 @@ export function Header() {
         <div className="text-lg font-semibold">SmartQR Admin</div>
         <nav className="hidden gap-2 md:flex">
           <NavLink to="/" className={linkClass} end>
-            Dashboard
+            Ana Sayfa
           </NavLink>
           <NavLink to="/qr/generate" className={linkClass}>
             QR Oluştur
           </NavLink>
-          <NavLink to="/qr/list" className={linkClass}>
-            QR Listesi
-          </NavLink>
           <NavLink to="/analytics" className={linkClass}>
-            Analytics
+            Analitikler
+          </NavLink>
+          <NavLink to="/packages" className={linkClass}>
+            Paketler
+          </NavLink>
+          <NavLink to="/test" className={linkClass}>
+            Test
           </NavLink>
           <NavLink to="/settings" className={linkClass}>
             Ayarlar

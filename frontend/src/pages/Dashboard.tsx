@@ -4,10 +4,28 @@ import { Button } from '../components/Common/Button';
 import { Header } from '../components/Common/Header';
 import { PricingCard } from '../components/Common/PricingCard';
 import { Card, CardContent } from '../components/ui/card';
+import { useEffect } from 'react';
+
+// Import AdminDashboard for logged-in users
+import AdminDashboard from './AdminDashboard';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      // Don't redirect here, show landing page instead
+    }
+  }, [isAuthenticated, navigate]);
+
+  // If authenticated, show AdminDashboard
+  if (isAuthenticated) {
+    return <AdminDashboard />;
+  }
+
+  // If not authenticated, show landing page
 
   return (
     <div className="min-h-screen bg-cream">
