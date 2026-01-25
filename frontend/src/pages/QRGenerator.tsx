@@ -294,7 +294,26 @@ export default function QRGeneratorPage() {
                 {/* Mockup Bottom Action */}
                 {step === 4 && result ? (
                   <div className="p-6 bg-white border-t border-slate-100">
-                    <button className="w-full bg-yellow-400 text-slate-900 font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+                    <button 
+                      onClick={async () => {
+                        if (!result.qrCodeImageUrl) return;
+                        try {
+                          const res = await fetch(result.qrCodeImageUrl);
+                          const blob = await res.blob();
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${result.shortCode}.png`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          URL.revokeObjectURL(url);
+                        } catch (error) {
+                          console.error('Download error:', error);
+                        }
+                      }}
+                      className="w-full bg-yellow-400 text-slate-900 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-yellow-300 transition-colors"
+                    >
                       <Download className="w-4 h-4" /> İndir (PNG)
                     </button>
                   </div>
