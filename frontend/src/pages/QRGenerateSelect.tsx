@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Globe, Image as ImageIcon, Link as LinkIcon, UserSquare2, Video, Wifi, ChevronRight } from 'lucide-react';
+import { FileText, Globe, Image as ImageIcon, Link as LinkIcon, UserSquare2, Video, Wifi, CreditCard, ChevronRight } from 'lucide-react';
 import { AdminLayout } from '../components/Layout/AdminLayout';
 
-type QRTypeKey = 'website' | 'pdf' | 'links' | 'vcard' | 'video' | 'images' | 'wifi';
+type QRTypeKey = 'website' | 'pdf' | 'links' | 'vcard' | 'video' | 'images' | 'wifi' | 'business-card';
 
 type QRType = {
   key: QRTypeKey;
@@ -21,6 +21,7 @@ export default function QRGenerateSelectPage() {
       { key: 'pdf', title: 'PDF', subtitle: 'PDF göster', Icon: FileText },
       { key: 'links', title: 'Sosyal Medya', subtitle: 'Sosyal medya hesaplarını paylaşın', Icon: LinkIcon },
       { key: 'vcard', title: 'vCard', subtitle: 'Elektronik kartvizit', Icon: UserSquare2 },
+      { key: 'business-card', title: 'İş Kartı', subtitle: 'Profesyonel iş kartı oluşturun', Icon: CreditCard },
       { key: 'video', title: 'Video', subtitle: 'Bir video göster', Icon: Video },
       { key: 'images', title: 'Görsel', subtitle: 'Görsel yükle veya link ver', Icon: ImageIcon },
       { key: 'wifi', title: 'WiFi', subtitle: 'Bir Wi‑Fi ağına bağlanın', Icon: Wifi },
@@ -43,7 +44,13 @@ export default function QRGenerateSelectPage() {
                 <button
                   key={t.key}
                   type="button"
-                  onClick={() => navigate(`/qr/generate/${t.key}`)}
+                  onClick={() => {
+                    if (t.key === 'business-card') {
+                      navigate('/qr/generate/business-card');
+                    } else {
+                      navigate(`/qr/generate/${t.key}`);
+                    }
+                  }}
                   className="text-left p-4 rounded-xl border-2 cursor-pointer transition-all border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50"
                 >
                   <t.Icon className="w-8 h-8 text-slate-700 mb-3" />
