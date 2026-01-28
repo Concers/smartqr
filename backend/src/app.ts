@@ -30,8 +30,60 @@ app.use(helmet({
 }));
 
 // CORS configuration
+const parseAllowedOrigins = (): Set<string> => {
+  const allowed = new Set<string>();
+  const raw = (config.cors.origin || '').split(',').map((s) => s.trim()).filter(Boolean);
+
+  for (const o of raw) {
+    try {
+      const u = new URL(o);
+      allowed.add(u.origin);
+    } catch {
+    }
+  }
+
+  for (const u of [config.app.url, config.qr.baseUrl]) {
+    try {
+      allowed.add(new URL(u).origin);
+    } catch {
+    }
+  }
+
+  return allowed;
+};
+
+const allowedOrigins = parseAllowedOrigins();
+
+const isOriginAllowed = (origin?: string): boolean => {
+  if (!origin) return true;
+
+  let host = '';
+  try {
+    host = new URL(origin).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+
+  if (config.nodeEnv === 'development' && (host === 'localhost' || host === '127.0.0.1')) {
+    return true;
+  }
+
+  const root = (config.qr.rootDomain || '').toLowerCase();
+  if (root && (host === root || host.endsWith(`.${root}`))) {
+    return true;
+  }
+
+  return allowedOrigins.has(origin);
+};
+
 app.use(cors({
-  origin: config.cors.origin,
+  origin: (origin, callback) => {
+    if (isOriginAllowed(origin || undefined)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 

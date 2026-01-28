@@ -2,10 +2,39 @@ import prisma from '@/config/database';
 import { ShortCodeGenerator } from '@/utils/shortCodeGenerator';
 import { QRGenerator } from '@/utils/qrGenerator';
 import { storage } from '@/services/storageService';
+import { config } from '@/config/app';
+
+const deriveUsernameFromEmail = (email?: string | null): string => {
+  const local = (email || '').split('@')[0] || '';
+  const normalized = local
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 30);
+  return normalized;
+};
+
+const parseRequestedUsernameFromHost = (host?: string | null): string => {
+  const h = (host || '').toLowerCase();
+  const root = (config.qr.rootDomain || '').toLowerCase();
+  if (!h || !root) return '';
+  if (h === root) return '';
+  if (!h.endsWith(`.${root}`)) return '';
+  const sub = h.slice(0, -1 * (`.${root}`.length));
+  if (!sub) return '';
+  const first = sub.split('.')[0] || '';
+  return first;
+};
 
 export class QRService {
   static async createQRCode(data: any, userId?: string): Promise<any> {
     const shortCode = await ShortCodeGenerator.generate(data.customCode);
+
+    const user = userId
+      ? await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+      : null;
+    const username = deriveUsernameFromEmail(user?.email);
 
     const qrCode = await prisma.qrCode.create({
       data: {
@@ -21,7 +50,7 @@ export class QRService {
       },
     });
 
-    const qrCodeUrl = QRGenerator.buildShortUrl(shortCode);
+    const qrCodeUrl = QRGenerator.buildShortUrlForUser(shortCode, username);
     const qrPng = await QRGenerator.generateQRCodePngBuffer(qrCodeUrl);
     const stored = await storage.savePng({
       key: `qr/${shortCode}.png`,
@@ -47,6 +76,9 @@ export class QRService {
 
   static async getQRCodesByUser(userId: string, page = 1, limit = 10, search?: string): Promise<any> {
     const skip = (page - 1) * limit;
+
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    const username = deriveUsernameFromEmail(user?.email);
     const where: any = {
       userId,
       ...(search && {
@@ -79,7 +111,7 @@ export class QRService {
       qrCodes: qrCodes.map((qr) => ({
         id: qr.id,
         shortCode: qr.shortCode,
-        qrCodeUrl: QRGenerator.buildShortUrl(qr.shortCode),
+        qrCodeUrl: QRGenerator.buildShortUrlForUser(qr.shortCode, username),
         destinationUrl: qr.destinations[0]?.destinationUrl || '',
         createdAt: qr.createdAt.toISOString(),
         expiresAt: qr.destinations[0]?.expiresAt?.toISOString(),
@@ -100,6 +132,7 @@ export class QRService {
         ...(userId && { userId }),
       },
       include: {
+        user: { select: { email: true } },
         destinations: {
           where: {
             isActive: true,
@@ -114,11 +147,12 @@ export class QRService {
     if (!qrCode) return null;
 
     const destination = qrCode.destinations[0];
+    const username = deriveUsernameFromEmail(qrCode.user?.email);
 
     return {
       id: qrCode.id,
       shortCode: qrCode.shortCode,
-      qrCodeUrl: QRGenerator.buildShortUrl(qrCode.shortCode),
+      qrCodeUrl: QRGenerator.buildShortUrlForUser(qrCode.shortCode, username),
       qrCodeImage: '',
       destinationUrl: destination?.destinationUrl || '',
       createdAt: qrCode.createdAt.toISOString(),
@@ -196,7 +230,21 @@ export class QRService {
     return updated.isActive;
   }
 
-  static async getDestinationByShortCode(shortCode: string): Promise<string | null> {
+  static async getDestinationByShortCode(shortCode: string, host?: string): Promise<string | null> {
+    const requestedUsername = parseRequestedUsernameFromHost(host);
+
+    if (requestedUsername) {
+      const qrOwner = await prisma.qrCode.findUnique({
+        where: { shortCode },
+        select: { user: { select: { email: true } } },
+      });
+
+      const ownerUsername = deriveUsernameFromEmail(qrOwner?.user?.email);
+      if (!ownerUsername || ownerUsername !== requestedUsername) {
+        return null;
+      }
+    }
+
     const destination = await prisma.urlDestination.findFirst({
       where: {
         qrCode: {

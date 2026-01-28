@@ -3,6 +3,7 @@ import { QRService } from '@/services/qrService';
 import { AnalyticsService } from '@/services/analyticsService';
 import prisma from '@/config/database';
 import { CacheService } from '@/services/cacheService';
+import { config } from '@/config/app';
 
 export class QRController {
   static async createQRCode(req: Request, res: Response): Promise<void> {
@@ -170,14 +171,24 @@ export class QRController {
     try {
       const { shortCode } = req.params;
 
-      // 1) Cache check
-      let destinationUrl = await CacheService.getCachedDestination(shortCode);
+      const host = (req.hostname || '').toLowerCase();
+      const root = (config.qr.rootDomain || '').toLowerCase();
+      const isSubdomainRequest = !!(host && root && host !== root && host.endsWith(`.${root}`));
+
+      let destinationUrl: string | null = null;
+
+      const canUseCache = !isSubdomainRequest;
+      if (canUseCache) {
+        destinationUrl = await CacheService.getCachedDestination(shortCode);
+      }
 
       // 2) DB fallback
       if (!destinationUrl) {
-        destinationUrl = await QRService.getDestinationByShortCode(shortCode);
+        destinationUrl = await QRService.getDestinationByShortCode(shortCode, host);
         if (destinationUrl) {
-          await CacheService.cacheDestination(shortCode, destinationUrl);
+          if (canUseCache) {
+            await CacheService.cacheDestination(shortCode, destinationUrl);
+          }
         }
       }
 

@@ -5,6 +5,8 @@ dotenv.config();
 const nodeEnv = process.env.NODE_ENV || 'development';
 const appUrl = process.env.APP_URL || 'http://localhost:3000';
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+const qrRootDomain = process.env.QR_ROOT_DOMAIN || '';
+const qrProtocol = process.env.QR_PROTOCOL || 'https';
 const qrBaseUrl = nodeEnv === 'development'
   ? appUrl
   : (process.env.QR_BASE_URL || 'https://qr.smartqrmanager.com');
@@ -33,6 +35,8 @@ export const config = {
   
   qr: {
     baseUrl: qrBaseUrl,
+    rootDomain: qrRootDomain,
+    protocol: qrProtocol,
     customDomainEnabled: process.env.QR_CUSTOM_DOMAIN_ENABLED === 'true',
     domainAliases: process.env.QR_DOMAIN_ALIASES?.split(',') || [],
   },

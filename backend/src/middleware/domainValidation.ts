@@ -31,9 +31,21 @@ export const validateDomain = (req: Request, res: Response, next: NextFunction):
       }
     }
 
+    if (config.qr.rootDomain) {
+      const dom = (config.qr.rootDomain || '').trim().toLowerCase();
+      if (dom) allowed.push(dom);
+    }
+
     if (allowed.includes(host)) {
       next();
       return;
+    }
+
+    for (const d of allowed) {
+      if (host.endsWith(`.${d}`)) {
+        next();
+        return;
+      }
     }
 
     res.status(403).json({

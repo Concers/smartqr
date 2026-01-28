@@ -143,4 +143,14 @@ export class QRGenerator {
   static buildShortUrl(shortCode: string): string {
     return `${config.qr.baseUrl}/${shortCode}`;
   }
+
+  static buildShortUrlForUser(shortCode: string, username?: string): string {
+    const u = (username || '').trim().toLowerCase();
+
+    if (u && config.qr.rootDomain) {
+      return `${config.qr.protocol}://${u}.${config.qr.rootDomain}/${shortCode}`;
+    }
+
+    return this.buildShortUrl(shortCode);
+  }
 }
