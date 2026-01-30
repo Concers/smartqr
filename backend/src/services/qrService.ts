@@ -2,10 +2,15 @@ import prisma from '@/config/database';
 import { ShortCodeGenerator } from '@/utils/shortCodeGenerator';
 import { QRGenerator } from '@/utils/qrGenerator';
 import { storage } from '@/services/storageService';
+import { generateQRUrl } from '@/utils/urlGenerator';
 
 export class QRService {
   static async createQRCode(data: any, userId?: string): Promise<any> {
     const shortCode = await ShortCodeGenerator.generate(data.customCode);
+
+    const user = userId
+      ? await prisma.user.findUnique({ where: { id: userId } })
+      : null;
 
     const qrCode = await prisma.qrCode.create({
       data: {
@@ -21,7 +26,7 @@ export class QRService {
       },
     });
 
-    const qrCodeUrl = QRGenerator.buildShortUrl(shortCode);
+    const qrCodeUrl = generateQRUrl(shortCode, user);
     const qrPng = await QRGenerator.generateQRCodePngBuffer(qrCodeUrl);
     const stored = await storage.savePng({
       key: `qr/${shortCode}.png`,
@@ -75,11 +80,13 @@ export class QRService {
       prisma.qrCode.count({ where }),
     ]);
 
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
     return {
       qrCodes: qrCodes.map((qr) => ({
         id: qr.id,
         shortCode: qr.shortCode,
-        qrCodeUrl: QRGenerator.buildShortUrl(qr.shortCode),
+        qrCodeUrl: generateQRUrl(qr.shortCode, user),
         destinationUrl: qr.destinations[0]?.destinationUrl || '',
         createdAt: qr.createdAt.toISOString(),
         expiresAt: qr.destinations[0]?.expiresAt?.toISOString(),
@@ -113,12 +120,16 @@ export class QRService {
 
     if (!qrCode) return null;
 
+    const user = userId
+      ? await prisma.user.findUnique({ where: { id: userId } })
+      : null;
+
     const destination = qrCode.destinations[0];
 
     return {
       id: qrCode.id,
       shortCode: qrCode.shortCode,
-      qrCodeUrl: QRGenerator.buildShortUrl(qrCode.shortCode),
+      qrCodeUrl: generateQRUrl(qrCode.shortCode, user),
       qrCodeImage: '',
       destinationUrl: destination?.destinationUrl || '',
       createdAt: qrCode.createdAt.toISOString(),

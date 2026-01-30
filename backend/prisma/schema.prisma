@@ -8,83 +8,83 @@ datasource db {
 }
 
 model User {
-  id                    String        @id @default(cuid())
-  email                 String        @unique
-  password              String
-  name                  String?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-  subdomain             String?       @unique
-  subdomainHistory      Json          @default("[]")
-  customDomainEnabled   Boolean       @default(false)
-  approvedCustomDomain String?       @unique
-  qrCodes               QrCode[]
-  customDomains         CustomDomain[]
+  id                   String         @id @default(cuid())
+  email                String         @unique
+  password             String
+  name                 String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  approvedCustomDomain String?        @unique
+  customDomainEnabled  Boolean        @default(false)
+  subdomain            String?        @unique
+  subdomainHistory     Json           @default("[]")
+  customDomains        CustomDomain[]
+  qrCodes              QrCode[]
 
   @@map("users")
 }
 
 model QrCode {
-  id                String    @id @default(cuid())
-  shortCode         String    @unique
-  originalUrl       String?
-  qrImageUrl        String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  isActive          Boolean   @default(true)
-  userId            String?
-  user              User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  customDomainEnabled Boolean @default(false)
-  customUrl         String?
-  destinations      UrlDestination[]
-  analytics         QrAnalytics[]
+  id                  String           @id @default(cuid())
+  shortCode           String           @unique
+  originalUrl         String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  isActive            Boolean          @default(true)
+  userId              String?
+  qrImageUrl          String?
+  customDomainEnabled Boolean          @default(false)
+  customUrl           String?
+  analytics           QrAnalytics[]
+  user                User?            @relation(fields: [userId], references: [id])
+  destinations        UrlDestination[]
 
   @@map("qr_codes")
 }
 
 model UrlDestination {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   qrCodeId       String
   destinationUrl String
-  activeFrom     DateTime @default(now())
+  activeFrom     DateTime  @default(now())
   expiresAt      DateTime?
-  isActive       Boolean  @default(true)
-  priority       Int      @default(1)
-  qrCode         QrCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+  isActive       Boolean   @default(true)
+  priority       Int       @default(1)
+  qrCode         QrCode    @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
 
   @@map("url_destinations")
 }
 
 model QrAnalytics {
-  id          String   @id @default(cuid())
-  qrCodeId    String
-  ipAddress   String?
-  userAgent   String?
-  country     String?
-  city        String?
-  deviceType  String?
-  browser     String?
-  accessedAt  DateTime @default(now())
-  qrCode      QrCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  qrCodeId   String
+  ipAddress  String?
+  userAgent  String?
+  country    String?
+  city       String?
+  deviceType String?
+  browser    String?
+  accessedAt DateTime @default(now())
+  qrCode     QrCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
 
   @@map("qr_analytics")
 }
 
 model CustomDomain {
-  id                 String    @id @default(cuid())
-  userId             String
-  domain             String    @unique
-  status             String    @default("pending") // pending, approved, rejected
-  dnsVerified        Boolean   @default(false)
-  sslConfigured      Boolean   @default(false)
-  verificationToken  String    @unique
-  adminNotes         String?
-  requestedAt        DateTime  @default(now())
-  approvedAt         DateTime?
-  rejectedAt         DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  userId            String
+  domain            String    @unique
+  status            String    @default("pending")
+  dnsVerified       Boolean   @default(false)
+  sslConfigured     Boolean   @default(false)
+  verificationToken String    @unique
+  adminNotes        String?
+  requestedAt       DateTime  @default(now())
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("custom_domains")
 }
