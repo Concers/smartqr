@@ -1,9 +1,14 @@
 import { User } from '@prisma/client';
 
 /**
- * Generate QR URL based on user's custom domain settings
+ * Generate QR URL based on user's custom domain settings or locked subdomain
  */
-export const generateQRUrl = (shortCode: string, user: User | null): string => {
+export const generateQRUrl = (shortCode: string, user: User | null, lockedSubdomain?: string | null): string => {
+  // If QR has a locked subdomain, always use it
+  if (lockedSubdomain) {
+    return `https://${lockedSubdomain}.netqr.io/${shortCode}`;
+  }
+
   if (user && user.customDomainEnabled && user.approvedCustomDomain) {
     return `https://${user.approvedCustomDomain}/${shortCode}`;
   }
@@ -58,8 +63,8 @@ export const isCustomSubdomainRequest = (hostname: string): boolean => {
 /**
  * Generate QR preview URL (for frontend display)
  */
-export const generateQRPreviewUrl = (shortCode: string, user: User | null): string => {
-  const baseUrl = generateQRUrl(shortCode, user);
+export const generateQRPreviewUrl = (shortCode: string, user: User | null, lockedSubdomain?: string | null): string => {
+  const baseUrl = generateQRUrl(shortCode, user, lockedSubdomain);
   return `${baseUrl}?preview=true`;
 };
 

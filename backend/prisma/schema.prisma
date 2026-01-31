@@ -55,6 +55,7 @@ model QrCode {
   qrImageUrl          String?
   customDomainEnabled Boolean          @default(false)
   customUrl           String?
+  lockedSubdomain     String?          // Locks this QR to a specific subdomain permanently
   analytics           QrAnalytics[]
   user                User?            @relation(fields: [userId], references: [id])
   destinations        UrlDestination[]

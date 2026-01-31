@@ -26,7 +26,7 @@ export class QRService {
       },
     });
 
-    const qrCodeUrl = generateQRUrl(shortCode, user);
+    const qrCodeUrl = generateQRUrl(shortCode, user, qrCode.lockedSubdomain);
     const qrPng = await QRGenerator.generateQRCodePngBuffer(qrCodeUrl);
     const stored = await storage.savePng({
       key: `qr/${shortCode}.png`,
@@ -86,7 +86,7 @@ export class QRService {
       qrCodes: qrCodes.map((qr) => ({
         id: qr.id,
         shortCode: qr.shortCode,
-        qrCodeUrl: generateQRUrl(qr.shortCode, user),
+        qrCodeUrl: generateQRUrl(qr.shortCode, user, qr.lockedSubdomain),
         destinationUrl: qr.destinations[0]?.destinationUrl || '',
         createdAt: qr.createdAt.toISOString(),
         expiresAt: qr.destinations[0]?.expiresAt?.toISOString(),
@@ -129,7 +129,7 @@ export class QRService {
     return {
       id: qrCode.id,
       shortCode: qrCode.shortCode,
-      qrCodeUrl: generateQRUrl(qrCode.shortCode, user),
+      qrCodeUrl: generateQRUrl(qrCode.shortCode, user, qrCode.lockedSubdomain),
       qrCodeImage: '',
       destinationUrl: destination?.destinationUrl || '',
       createdAt: qrCode.createdAt.toISOString(),
