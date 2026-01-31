@@ -10,6 +10,9 @@ import AnalyticsPage from './pages/Analytics';
 import AdminPricingPage from './pages/AdminPricing';
 import SettingsPage from './pages/Settings';
 import PricingPage from './pages/Pricing';
+import AdminCustomDomainsPage from './pages/AdminCustomDomains';
+import AdminSubdomainRequestsPage from './pages/AdminSubdomainRequests';
+import SubdomainRequestPage from './pages/SubdomainRequest';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 import RateLimitPage from './pages/RateLimitPage';
@@ -20,6 +23,8 @@ export default function App() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin/custom-domains" element={<AdminCustomDomainsPage />} />
+      <Route path="/admin/subdomain-requests" element={<AdminSubdomainRequestsPage />} />
       
       {/* Admin pages - With AdminLayout (no additional wrapper needed) */}
       <Route path="/qr/generate" element={<QRGenerateSelectPage />} />
@@ -29,6 +34,7 @@ export default function App() {
       <Route path="/analytics" element={<AnalyticsPage />} />
       <Route path="/pricing" element={<AdminPricingPage />} />
       <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/subdomain" element={<SubdomainRequestPage />} />
       
       {/* Auth pages - Full page without Layout */}
       <Route path="/login" element={<LoginPage />} />

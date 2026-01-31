@@ -7,7 +7,8 @@ import {
   LogOut,
   Home,
   Package,
-  TestTube
+  TestTube,
+  Globe
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -17,6 +18,19 @@ const menuItems = [
     label: 'Ana Sayfa',
     icon: Home,
     path: '/admin'
+  },
+  {
+    key: 'subdomain-request',
+    label: 'Subdomain Talebi',
+    icon: Globe,
+    path: '/subdomain'
+  },
+  {
+    key: 'admin-subdomain-requests',
+    label: 'Subdomain Talepleri',
+    icon: Globe,
+    path: '/admin/subdomain-requests',
+    adminOnly: true,
   },
   {
     key: 'qr-generate',
@@ -58,6 +72,9 @@ export function AdminSidebar({ className = "" }: AdminSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  const adminEmails = ['admin@netqr.io', 'admin@admin.com'];
+  const isAdmin = !!user?.email && adminEmails.includes(user.email);
 
   const isActive = (path: string) => {
     return location.pathname === path || 
@@ -119,7 +136,9 @@ export function AdminSidebar({ className = "" }: AdminSidebarProps) {
       {/* Navigation Menu */}
       <nav className="flex-1 p-4">
         <div className="space-y-1">
-          {menuItems.map((item) => {
+          {menuItems
+            .filter((item: any) => (item.adminOnly ? isAdmin : true))
+            .map((item: any) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             

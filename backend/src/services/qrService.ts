@@ -3,6 +3,7 @@ import { ShortCodeGenerator } from '@/utils/shortCodeGenerator';
 import { QRGenerator } from '@/utils/qrGenerator';
 import { storage } from '@/services/storageService';
 import { config } from '@/config/app';
+import { generateQRUrl } from '@/utils/urlGenerator';
 
 const deriveUsernameFromEmail = (email?: string | null): string => {
   const local = (email || '').split('@')[0] || '';
@@ -32,7 +33,7 @@ export class QRService {
     const shortCode = await ShortCodeGenerator.generate(data.customCode);
 
     const user = userId
-      ? await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+      ? await prisma.user.findUnique({ where: { id: userId } })
       : null;
     const username = deriveUsernameFromEmail(user?.email);
 
@@ -79,6 +80,7 @@ export class QRService {
 
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
     const username = deriveUsernameFromEmail(user?.email);
+
     const where: any = {
       userId,
       ...(search && {
@@ -145,6 +147,10 @@ export class QRService {
     });
 
     if (!qrCode) return null;
+
+    const user = userId
+      ? await prisma.user.findUnique({ where: { id: userId } })
+      : null;
 
     const destination = qrCode.destinations[0];
     const username = deriveUsernameFromEmail(qrCode.user?.email);

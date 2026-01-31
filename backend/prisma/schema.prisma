@@ -8,29 +8,57 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  qrCodes   QrCode[]
+  id                   String         @id @default(cuid())
+  email                String         @unique
+  password             String
+  name                 String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  approvedCustomDomain String?        @unique
+  customDomainEnabled  Boolean        @default(false)
+  subdomain            String?        @unique
+  subdomainHistory     Json           @default("[]")
+  customDomains        CustomDomain[]
+  subdomainRequests    SubdomainRequest[]
+  qrCodes              QrCode[]
 
   @@map("users")
 }
 
+model SubdomainRequest {
+  id                 String   @id @default(cuid())
+  userId             String
+  requestedSubdomain String
+  status             String   @default("pending") // pending, approved, rejected
+  adminNotes         String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  approvedAt         DateTime?
+  rejectedAt         DateTime?
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([requestedSubdomain])
+  @@index([userId])
+  @@index([status])
+  @@map("subdomain_requests")
+}
+
 model QrCode {
-  id           String           @id @default(cuid())
-  shortCode    String           @unique
-  originalUrl  String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  isActive     Boolean          @default(true)
-  userId       String?
-  qrImageUrl   String?
-  analytics    QrAnalytics[]
-  user         User?            @relation(fields: [userId], references: [id])
-  destinations UrlDestination[]
+  id                  String           @id @default(cuid())
+  shortCode           String           @unique
+  originalUrl         String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  isActive            Boolean          @default(true)
+  userId              String?
+  qrImageUrl          String?
+  customDomainEnabled Boolean          @default(false)
+  customUrl           String?
+  lockedSubdomain     String?          // Locks this QR to a specific subdomain permanently
+  analytics           QrAnalytics[]
+  user                User?            @relation(fields: [userId], references: [id])
+  destinations        UrlDestination[]
 
   @@map("qr_codes")
 }
@@ -61,4 +89,23 @@ model QrAnalytics {
   qrCode     QrCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
 
   @@map("qr_analytics")
+}
+
+model CustomDomain {
+  id                String    @id @default(cuid())
+  userId            String
+  domain            String    @unique
+  status            String    @default("pending")
+  dnsVerified       Boolean   @default(false)
+  sslConfigured     Boolean   @default(false)
+  verificationToken String    @unique
+  adminNotes        String?
+  requestedAt       DateTime  @default(now())
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("custom_domains")
 }

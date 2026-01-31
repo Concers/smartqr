@@ -5,6 +5,7 @@ import { config } from '@/config/app';
 import { validateUserRegistration, validateUserLogin } from '@/middleware/validation';
 import { authRateLimiter } from '@/middleware/rateLimit';
 import prisma from '@/config/database';
+import SubdomainService from '@/services/subdomainService';
 
 const router = Router();
 
@@ -43,8 +44,16 @@ router.post('/register',
           email: true,
           name: true,
           createdAt: true,
+          subdomain: true,
         },
       });
+
+      // Assign subdomain on registration (if missing)
+      const subdomainService = new SubdomainService();
+      let assignedSubdomain = user.subdomain;
+      if (!assignedSubdomain) {
+        assignedSubdomain = await subdomainService.assignSubdomainOnRegistration(user.id);
+      }
 
       // Generate token
       const token = generateToken(user.id);
@@ -52,7 +61,10 @@ router.post('/register',
       res.status(201).json({
         success: true,
         data: {
-          user,
+          user: {
+            ...user,
+            subdomain: assignedSubdomain,
+          },
           token,
         },
         message: 'User registered successfully',
@@ -97,6 +109,13 @@ router.post('/login',
         });
       }
 
+      // Ensure the user has a subdomain (backfill for existing users)
+      let subdomain = user.subdomain;
+      if (!subdomain) {
+        const subdomainService = new SubdomainService();
+        subdomain = await subdomainService.assignSubdomainToUser(user.id);
+      }
+
       // Generate token
       const token = generateToken(user.id);
 
@@ -107,6 +126,7 @@ router.post('/login',
             id: user.id,
             email: user.email,
             name: user.name,
+            subdomain,
           },
           token,
         },
