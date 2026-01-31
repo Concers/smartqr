@@ -8,6 +8,24 @@ export class SubdomainService {
   private readonly SUBDOMAIN_LENGTH = 10;
   private readonly MAX_ATTEMPTS = 100;
 
+  private normalizeRequestedSubdomain(input: string): string {
+    return (input || '').trim().toLowerCase();
+  }
+
+  private isValidRequestedSubdomainFormat(subdomain: string): boolean {
+    // Allow: a-z 0-9 and hyphen, must start/end with alnum, length 3-30
+    if (!subdomain) return false;
+    if (subdomain.length < 3 || subdomain.length > 30) return false;
+    if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(subdomain)) return false;
+    if (subdomain.includes('--')) return false;
+    return true;
+  }
+
+  private isReservedSubdomain(subdomain: string): boolean {
+    const reserved = new Set(['www', 'netqr', 'admin', 'api']);
+    return reserved.has(subdomain);
+  }
+
   /**
    * Rastgele subdomain generate eder
    * Format: user-{10 karakter random}
@@ -36,6 +54,37 @@ export class SubdomainService {
       console.error('Error checking subdomain availability:', error);
       throw new Error('Failed to check subdomain availability');
     }
+  }
+
+  /**
+   * Admin-approved flow: assign a requested custom subdomain (e.g. "mybrand") to user.
+   * Keeps previous subdomain in history.
+   */
+  async assignRequestedSubdomainToUser(userId: string, requestedSubdomain: string): Promise<string> {
+    const subdomain = this.normalizeRequestedSubdomain(requestedSubdomain);
+
+    if (!this.isValidRequestedSubdomainFormat(subdomain)) {
+      throw new Error('Invalid subdomain format');
+    }
+
+    if (this.isReservedSubdomain(subdomain)) {
+      throw new Error('Subdomain is reserved');
+    }
+
+    const available = await this.isSubdomainAvailable(subdomain);
+    if (!available) {
+      throw new Error('Subdomain is already in use');
+    }
+
+    // Keep previous subdomain in history then assign
+    await this.updateSubdomainHistory(userId);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { subdomain },
+    });
+
+    console.log(`✅ Requested subdomain assigned: ${subdomain} for user: ${userId}`);
+    return subdomain;
   }
 
   /**

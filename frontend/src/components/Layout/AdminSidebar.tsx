@@ -20,10 +20,16 @@ const menuItems = [
     path: '/admin'
   },
   {
-    key: 'custom-domains',
-    label: 'Custom Domain',
+    key: 'subdomain-request',
+    label: 'Subdomain Talebi',
     icon: Globe,
-    path: '/admin/custom-domains',
+    path: '/subdomain'
+  },
+  {
+    key: 'admin-subdomain-requests',
+    label: 'Subdomain Talepleri',
+    icon: Globe,
+    path: '/admin/subdomain-requests',
     adminOnly: true,
   },
   {
