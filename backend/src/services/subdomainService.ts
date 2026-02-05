@@ -42,6 +42,17 @@ export class SubdomainService {
   }
 
   /**
+   * Kullanıcı ID'sine göre subdomain generate eder
+   * Format: user ID'nin ilk 8 karakteri (unique olduğu için collision olmaz)
+   */
+  generateSubdomainFromUserId(userId: string): string {
+    // CUID formatı: cml28gmi70000la3ed8d9e2sd
+    // İlk 8-12 karakteri kullan (unique ve readable)
+    const shortId = userId.slice(0, 8).toLowerCase();
+    return shortId;
+  }
+
+  /**
    * Subdomain'in kullanılabilir olup olmadığını kontrol eder
    */
   async isSubdomainAvailable(subdomain: string): Promise<boolean> {
@@ -89,8 +100,28 @@ export class SubdomainService {
 
   /**
    * Kullanıcıya benzersiz subdomain atar
+   * Önce ID-based denemesi yapar, o mümkün değilse random subdomain atar
    */
   async assignSubdomainToUser(userId: string): Promise<string> {
+    // Önce ID-based subdomain'i dene
+    try {
+      const idBasedSubdomain = this.generateSubdomainFromUserId(userId);
+      const idAvailable = await this.isSubdomainAvailable(idBasedSubdomain);
+      
+      if (idAvailable) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { subdomain: idBasedSubdomain }
+        });
+        
+        console.log(`✅ ID-based subdomain assigned: ${idBasedSubdomain} for user: ${userId}`);
+        return idBasedSubdomain;
+      }
+    } catch (error) {
+      console.log('ID-based subdomain failed, falling back to random:', error);
+    }
+    
+    // Fallback: random subdomain
     let attempts = 0;
     
     while (attempts < this.MAX_ATTEMPTS) {
@@ -109,7 +140,7 @@ export class SubdomainService {
             data: { subdomain }
           });
           
-          console.log(`✅ Subdomain assigned: ${subdomain} for user: ${userId}`);
+          console.log(`✅ Random subdomain assigned: ${subdomain} for user: ${userId}`);
           return subdomain;
         }
         

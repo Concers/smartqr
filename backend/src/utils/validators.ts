@@ -2,10 +2,14 @@ import Joi from 'joi';
 
 export const qrCodeSchema = Joi.object({
   destinationUrl: Joi.alternatives()
-    .try(Joi.string().uri(), Joi.string().pattern(/^WIFI:/i))
+    .try(
+      Joi.string().uri(), 
+      Joi.string().pattern(/^WIFI:/i),
+      Joi.string().pattern(/^data:text\/html/i)
+    )
     .required()
     .messages({
-      'alternatives.match': 'Destination URL must be a valid URL',
+      'alternatives.match': 'Destination URL must be a valid URL, WIFI: config, or data: HTML',
       'any.required': 'Destination URL is required',
     }),
   customCode: Joi.string()
@@ -18,6 +22,16 @@ export const qrCodeSchema = Joi.object({
       'string.min': 'Custom code must be at least 3 characters long',
       'string.max': 'Custom code must not exceed 20 characters',
     }),
+  customSubdomain: Joi.string()
+    .pattern(/^[a-z0-9-]+$/)
+    .min(3)
+    .max(20)
+    .optional()
+    .messages({
+      'string.pattern.base': 'Custom subdomain must contain only lowercase letters, numbers, and hyphens',
+      'string.min': 'Custom subdomain must be at least 3 characters long',
+      'string.max': 'Custom subdomain must not exceed 20 characters',
+    }),
   expiresAt: Joi.date().iso().optional().messages({
     'date.format': 'Expiration date must be a valid ISO date',
   }),
@@ -25,10 +39,14 @@ export const qrCodeSchema = Joi.object({
 
 export const updateDestinationSchema = Joi.object({
   destinationUrl: Joi.alternatives()
-    .try(Joi.string().uri(), Joi.string().pattern(/^WIFI:/i))
+    .try(
+      Joi.string().uri(), 
+      Joi.string().pattern(/^WIFI:/i),
+      Joi.string().pattern(/^data:text\/html/i)
+    )
     .required()
     .messages({
-      'alternatives.match': 'Destination URL must be a valid URL',
+      'alternatives.match': 'Destination URL must be a valid URL, WIFI: config, or data: HTML',
       'any.required': 'Destination URL is required',
     }),
   activeFrom: Joi.date().iso().optional().messages({

@@ -72,7 +72,25 @@ export default function AdminDashboard() {
 
   const handleCopyUrl = async (url: string) => {
     try {
+<<<<<<< HEAD
       await navigator.clipboard.writeText(url);
+=======
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+>>>>>>> origin/feature/business-card-preview
     } catch (err) {
       console.error('Failed to copy:', err);
     }

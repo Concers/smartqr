@@ -95,7 +95,25 @@ export default function QRListPage() {
 
   const handleCopyUrl = async (url: string) => {
     try {
+<<<<<<< HEAD
       await navigator.clipboard.writeText(url);
+=======
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+>>>>>>> origin/feature/business-card-preview
       // Could add toast notification here
     } catch (err) {
       console.error('Failed to copy:', err);
@@ -288,9 +306,15 @@ export default function QRListPage() {
                             <div className="font-bold text-slate-900 text-sm">{qr.name}</div>
                             <div
                               className="flex items-center gap-2 text-xs text-slate-500 mt-0.5 group/link cursor-pointer"
+<<<<<<< HEAD
                               onClick={() => handleCopyUrl(qr.type === 'vCard' ? qr.qrCodeUrl : qr.url)}
                             >
                               <span className="truncate max-w-[150px]">{qr.type === 'vCard' ? qr.qrCodeUrl : qr.url}</span>
+=======
+                              onClick={() => handleCopyUrl(qr.qrCodeUrl)}
+                            >
+                              <span className="truncate max-w-[150px]">{qr.qrCodeUrl}</span>
+>>>>>>> origin/feature/business-card-preview
                               <Copy className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity hover:text-yellow-600" />
                             </div>
                           </div>

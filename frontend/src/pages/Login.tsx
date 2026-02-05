@@ -37,7 +37,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
+<<<<<<< HEAD
       {/* Sol Taraf - SmartQR Branding */}
+=======
+      {/* Sol Taraf - netqr.io Branding */}
+>>>>>>> origin/feature/business-card-preview
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
@@ -58,7 +62,11 @@ export default function LoginPage() {
                 </svg>
               </div>
               <div>
+<<<<<<< HEAD
                 <h1 className="text-4xl font-bold tracking-tight">SmartQR</h1>
+=======
+                <h1 className="text-4xl font-bold tracking-tight">netqr.io</h1>
+>>>>>>> origin/feature/business-card-preview
                 <p className="text-yellow-400 text-sm font-medium">Admin Panel</p>
               </div>
             </div>
@@ -148,7 +156,11 @@ export default function LoginPage() {
                   <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm8 2h2v2h-2v-2zm2-2h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2z"/>
                 </svg>
               </div>
+<<<<<<< HEAD
               <h1 className="text-3xl font-bold text-slate-900">SmartQR</h1>
+=======
+              <h1 className="text-3xl font-bold text-slate-900">netqr.io</h1>
+>>>>>>> origin/feature/business-card-preview
             </div>
             <h2 className="text-4xl font-bold text-slate-900 mb-3">Admin Girişi</h2>
             <p className="text-lg text-slate-600">QR kodlarınızı yönetmek için hesabınıza giriş yapın</p>

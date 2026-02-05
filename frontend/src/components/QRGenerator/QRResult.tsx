@@ -41,13 +41,35 @@ export function QRResult({ data }: { data: QRResultData }) {
   };
 
   const copy = async (text: string) => {
+<<<<<<< HEAD
     await navigator.clipboard.writeText(text);
+=======
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      // Fallback for older browsers or non-secure contexts
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+>>>>>>> origin/feature/business-card-preview
   };
 
   const share = async () => {
     if ((navigator as any).share) {
       await (navigator as any).share({
+<<<<<<< HEAD
         title: 'SmartQR',
+=======
+        title: 'netqr.io',
+>>>>>>> origin/feature/business-card-preview
         text: 'QR Link',
         url: data.qrCodeUrl,
       });

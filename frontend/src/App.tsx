@@ -5,6 +5,7 @@ import LandingPage from './pages/LandingPage';
 import QRGenerateSelectPage from './pages/QRGenerateSelect';
 import QRGenerateTypePage from './pages/QRGenerateType';
 import QRGenerateBusinessCardPage from './pages/QRGenerateBusinessCard';
+import BusinessCardPreview from './pages/BusinessCardPreview';
 import QRListPage from './pages/QRList';
 import AnalyticsPage from './pages/Analytics';
 import AdminPricingPage from './pages/AdminPricing';
@@ -30,6 +31,7 @@ export default function App() {
       <Route path="/qr/generate" element={<QRGenerateSelectPage />} />
       <Route path="/qr/generate/:type" element={<QRGenerateTypePage />} />
       <Route path="/qr/generate/business-card" element={<QRGenerateBusinessCardPage />} />
+      <Route path="/business-card-preview" element={<BusinessCardPreview />} />
       <Route path="/qr/list" element={<QRListPage />} />
       <Route path="/analytics" element={<AnalyticsPage />} />
       <Route path="/pricing" element={<AdminPricingPage />} />
