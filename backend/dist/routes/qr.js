@@ -1,0 +1,20 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const qrController_1 = require("@/controllers/qrController");
+const auth_1 = require("@/middleware/auth");
+const validation_1 = require("@/middleware/validation");
+const rateLimit_1 = require("@/middleware/rateLimit");
+const router = (0, express_1.Router)();
+router.post('/', auth_1.authenticateToken, rateLimit_1.qrRateLimiter, validation_1.validateCreateQR, qrController_1.QRController.createQRCode);
+router.post('/generate', auth_1.authenticateToken, rateLimit_1.qrRateLimiter, validation_1.validateCreateQR, qrController_1.QRController.createQRCode);
+router.get('/', auth_1.authenticateToken, rateLimit_1.qrRateLimiter, validation_1.validatePagination, qrController_1.QRController.getQRCodes);
+router.get('/list', auth_1.authenticateToken, rateLimit_1.qrRateLimiter, validation_1.validatePagination, qrController_1.QRController.getQRCodes);
+router.get('/resolve/:shortCode', qrController_1.QRController.resolveShortCode);
+router.get('/:id', auth_1.authenticateToken, rateLimit_1.qrRateLimiter, validation_1.validateUUID, qrController_1.QRController.getQRCodeById);
+router.put('/:id/destination', auth_1.authenticateToken, rateLimit_1.qrRateLimiter, validation_1.validateUUID, validation_1.validateUpdateDestination, qrController_1.QRController.updateDestination);
+router.delete('/:id', auth_1.authenticateToken, rateLimit_1.qrRateLimiter, validation_1.validateUUID, qrController_1.QRController.deleteQRCode);
+router.patch('/:id/toggle', auth_1.authenticateToken, rateLimit_1.qrRateLimiter, validation_1.validateUUID, qrController_1.QRController.toggleQRCodeStatus);
+router.get('/:id/analytics', auth_1.authenticateToken, rateLimit_1.qrRateLimiter, validation_1.validateUUID, validation_1.validateAnalyticsQuery, qrController_1.QRController.getQRCodeAnalytics);
+exports.default = router;
+//# sourceMappingURL=qr.js.map
