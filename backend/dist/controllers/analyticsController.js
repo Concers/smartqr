@@ -10,7 +10,8 @@ class AnalyticsController {
     static async getOverallStats(req, res) {
         try {
             const userId = req.user?.id;
-            const stats = await analyticsService_1.AnalyticsService.getOverallStats(userId);
+            const qrId = req.query.qrId;
+            const stats = await analyticsService_1.AnalyticsService.getOverallStats(userId, qrId);
             res.json({ success: true, data: stats });
         }
         catch (error) {
@@ -20,7 +21,8 @@ class AnalyticsController {
     static async getDailyStats(req, res) {
         try {
             const userId = req.user?.id;
-            const stats = await analyticsService_1.AnalyticsService.getDailyStats(userId);
+            const qrId = req.query.qrId;
+            const stats = await analyticsService_1.AnalyticsService.getDailyStats(userId, qrId);
             res.json({ success: true, data: stats });
         }
         catch (error) {
@@ -30,7 +32,8 @@ class AnalyticsController {
     static async getGeoStats(req, res) {
         try {
             const userId = req.user?.id;
-            const stats = await analyticsService_1.AnalyticsService.getGeoStats(userId);
+            const qrId = req.query.qrId;
+            const stats = await analyticsService_1.AnalyticsService.getGeoStats(userId, qrId);
             res.json({ success: true, data: stats });
         }
         catch (error) {
@@ -40,7 +43,8 @@ class AnalyticsController {
     static async getDeviceStats(req, res) {
         try {
             const userId = req.user?.id;
-            const stats = await analyticsService_1.AnalyticsService.getDeviceStats(userId);
+            const qrId = req.query.qrId;
+            const stats = await analyticsService_1.AnalyticsService.getDeviceStats(userId, qrId);
             res.json({ success: true, data: stats });
         }
         catch (error) {
@@ -50,11 +54,35 @@ class AnalyticsController {
     static async getBrowserStats(req, res) {
         try {
             const userId = req.user?.id;
-            const stats = await analyticsService_1.AnalyticsService.getBrowserStats(userId);
+            const qrId = req.query.qrId;
+            const stats = await analyticsService_1.AnalyticsService.getBrowserStats(userId, qrId);
             res.json({ success: true, data: stats });
         }
         catch (error) {
             res.status(500).json({ success: false, error: error.message || 'Failed to get browser stats' });
+        }
+    }
+    static async getHourlyStats(req, res) {
+        try {
+            const userId = req.user?.id;
+            const qrId = req.query.qrId;
+            const stats = await analyticsService_1.AnalyticsService.getHourlyStats(userId, qrId);
+            res.json({ success: true, data: stats });
+        }
+        catch (error) {
+            res.status(500).json({ success: false, error: error.message || 'Failed to get hourly stats' });
+        }
+    }
+    static async getRecentClicks(req, res) {
+        try {
+            const userId = req.user?.id;
+            const qrId = req.query.qrId;
+            const limit = parseInt(req.query.limit) || 20;
+            const clicks = await analyticsService_1.AnalyticsService.getRecentClicks(userId, qrId, limit);
+            res.json({ success: true, data: clicks });
+        }
+        catch (error) {
+            res.status(500).json({ success: false, error: error.message || 'Failed to get recent clicks' });
         }
     }
     static async getQRCodeAnalytics(req, res) {

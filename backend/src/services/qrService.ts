@@ -24,6 +24,7 @@ const generateRandomSubdomain = (): string => {
   }
   return result;
 };
+
 const parseRequestedUsernameFromHost = (host?: string | null): string => {
   const h = (host || '').toLowerCase();
   const root = (config.qr.rootDomain || '').toLowerCase();
@@ -41,27 +42,18 @@ export class QRService {
     const shortCode = await ShortCodeGenerator.generate(data.customCode);
 
     const user = userId
-<<<<<<< HEAD
-      ? await prisma.user.findUnique({ where: { id: userId } })
-      : null;
-    const username = deriveUsernameFromEmail(user?.email);
-=======
       ? await prisma.user.findUnique({ where: { id: userId }, select: { subdomain: true } })
       : null;
     
     // Use user's current subdomain (ID-based or custom)
     const userSubdomain = user?.subdomain || 'default';
->>>>>>> origin/feature/business-card-preview
 
     const qrCode = await prisma.qrCode.create({
       data: {
         shortCode,
         originalUrl: data.destinationUrl,
         userId,
-<<<<<<< HEAD
-=======
         lockedSubdomain: userSubdomain,
->>>>>>> origin/feature/business-card-preview
         destinations: {
           create: {
             destinationUrl: data.destinationUrl,
@@ -71,12 +63,14 @@ export class QRService {
       },
     });
 
-<<<<<<< HEAD
-    const qrCodeUrl = QRGenerator.buildShortUrlForUser(shortCode, username);
-=======
     const qrCodeUrl = `${config.qr.protocol}://${userSubdomain}.${config.qr.rootDomain}/${shortCode}`;
->>>>>>> origin/feature/business-card-preview
-    const qrPng = await QRGenerator.generateQRCodePngBuffer(qrCodeUrl);
+
+    // WiFi payloads must be encoded directly into the QR image (not via short URL redirect)
+    // because phones need to see the raw WIFI: string to trigger the "Join Network" prompt.
+    const isWifi = data.destinationUrl.toUpperCase().startsWith('WIFI:');
+    const qrContent = isWifi ? data.destinationUrl : qrCodeUrl;
+
+    const qrPng = await QRGenerator.generateQRCodePngBuffer(qrContent);
     const stored = await storage.savePng({
       key: `qr/${shortCode}.png`,
       buffer: qrPng,
@@ -90,28 +84,19 @@ export class QRService {
     return {
       id: qrCode.id,
       shortCode,
-      qrCodeUrl,
+      qrCodeUrl: isWifi ? qrContent : qrCodeUrl,
       qrCodeImageUrl: stored.publicUrl,
       destinationUrl: data.destinationUrl,
       createdAt: qrCode.createdAt.toISOString(),
       expiresAt: data.expiresAt,
       isActive: qrCode.isActive,
-<<<<<<< HEAD
-=======
       customSubdomain: userSubdomain,
->>>>>>> origin/feature/business-card-preview
     };
   }
 
   static async getQRCodesByUser(userId: string, page = 1, limit = 10, search?: string): Promise<any> {
     const skip = (page - 1) * limit;
 
-<<<<<<< HEAD
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-    const username = deriveUsernameFromEmail(user?.email);
-
-=======
->>>>>>> origin/feature/business-card-preview
     const where: any = {
       userId,
       ...(search && {
@@ -144,22 +129,15 @@ export class QRService {
       qrCodes: qrCodes.map((qr) => ({
         id: qr.id,
         shortCode: qr.shortCode,
-<<<<<<< HEAD
-        qrCodeUrl: QRGenerator.buildShortUrlForUser(qr.shortCode, username),
-=======
         qrCodeUrl: qr.lockedSubdomain 
           ? `${config.qr.protocol}://${qr.lockedSubdomain}.${config.qr.rootDomain}/${qr.shortCode}`
           : `${config.qr.baseUrl}/${qr.shortCode}`,
->>>>>>> origin/feature/business-card-preview
         destinationUrl: qr.destinations[0]?.destinationUrl || '',
         createdAt: qr.createdAt.toISOString(),
         expiresAt: qr.destinations[0]?.expiresAt?.toISOString(),
         isActive: qr.isActive,
         clicks: qr._count.analytics,
-<<<<<<< HEAD
-=======
         customSubdomain: qr.lockedSubdomain,
->>>>>>> origin/feature/business-card-preview
       })),
       total,
       page,
@@ -175,10 +153,6 @@ export class QRService {
         ...(userId && { userId }),
       },
       include: {
-<<<<<<< HEAD
-        user: { select: { email: true } },
-=======
->>>>>>> origin/feature/business-card-preview
         destinations: {
           where: {
             isActive: true,
@@ -192,36 +166,20 @@ export class QRService {
 
     if (!qrCode) return null;
 
-<<<<<<< HEAD
-    const user = userId
-      ? await prisma.user.findUnique({ where: { id: userId } })
-      : null;
-
     const destination = qrCode.destinations[0];
-    const username = deriveUsernameFromEmail(qrCode.user?.email);
-=======
-    const destination = qrCode.destinations[0];
->>>>>>> origin/feature/business-card-preview
 
     return {
       id: qrCode.id,
       shortCode: qrCode.shortCode,
-<<<<<<< HEAD
-      qrCodeUrl: QRGenerator.buildShortUrlForUser(qrCode.shortCode, username),
-=======
       qrCodeUrl: qrCode.lockedSubdomain 
         ? `${config.qr.protocol}://${qrCode.lockedSubdomain}.${config.qr.rootDomain}/${qrCode.shortCode}`
         : `${config.qr.baseUrl}/${qrCode.shortCode}`,
->>>>>>> origin/feature/business-card-preview
       qrCodeImage: '',
       destinationUrl: destination?.destinationUrl || '',
       createdAt: qrCode.createdAt.toISOString(),
       expiresAt: destination?.expiresAt?.toISOString(),
       isActive: qrCode.isActive,
-<<<<<<< HEAD
-=======
       customSubdomain: qrCode.lockedSubdomain,
->>>>>>> origin/feature/business-card-preview
     };
   }
 
@@ -295,20 +253,6 @@ export class QRService {
   }
 
   static async getDestinationByShortCode(shortCode: string, host?: string): Promise<string | null> {
-<<<<<<< HEAD
-    const requestedUsername = parseRequestedUsernameFromHost(host);
-
-    if (requestedUsername) {
-      const qrOwner = await prisma.qrCode.findUnique({
-        where: { shortCode },
-        select: { user: { select: { email: true } } },
-      });
-
-      const ownerUsername = deriveUsernameFromEmail(qrOwner?.user?.email);
-      if (!ownerUsername || ownerUsername !== requestedUsername) {
-        return null;
-      }
-=======
     const requestedSubdomain = parseRequestedUsernameFromHost(host);
 
     if (requestedSubdomain) {
@@ -345,7 +289,6 @@ export class QRService {
           return null;
         }
       }
->>>>>>> origin/feature/business-card-preview
     }
 
     const destination = await prisma.urlDestination.findFirst({

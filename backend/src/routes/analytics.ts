@@ -38,6 +38,18 @@ router.get('/browsers',
   AnalyticsController.getBrowserStats
 );
 
+// Hourly distribution (last 7 days)
+router.get('/hourly',
+  authenticateToken,
+  AnalyticsController.getHourlyStats
+);
+
+// Recent clicks log
+router.get('/clicks',
+  authenticateToken,
+  AnalyticsController.getRecentClicks
+);
+
 // Get analytics for specific QR code
 router.get('/:id',
   authenticateToken,

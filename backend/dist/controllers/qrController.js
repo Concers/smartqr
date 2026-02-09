@@ -213,9 +213,57 @@ class QRController {
                     const meta = commaIndex >= 0 ? destinationUrl.slice(0, commaIndex) : destinationUrl;
                     const dataPart = commaIndex >= 0 ? destinationUrl.slice(commaIndex + 1) : '';
                     const isBase64 = /;base64/i.test(meta);
-                    const htmlText = isBase64
+                    let htmlText = isBase64
                         ? Buffer.from(dataPart, 'base64').toString('utf8')
                         : decodeURIComponent(dataPart);
+                    const rehbereButtonRe = /<button\s+onclick="[^"]*"[^>]*>([\s\S]*?Rehbere Ekle[\s\S]*?)<\/button>/i;
+                    if (rehbereButtonRe.test(htmlText)) {
+                        const fields = {};
+                        const nmMatch = htmlText.match(/class="nm"[^>]*>([^<]+)/);
+                        const ttMatch = htmlText.match(/class="tt"[^>]*>([^<]+)/);
+                        const coMatch = htmlText.match(/class="co"[^>]*>([^<]+)/);
+                        const telMatch = htmlText.match(/href="tel:([^"]+)"/);
+                        const mailMatch = htmlText.match(/href="mailto:([^"]+)"/);
+                        const addrRvMatches = [...htmlText.matchAll(/class="rv"[^>]*>([^<]+)/g)];
+                        const konumIdx = htmlText.indexOf('Konum');
+                        if (konumIdx > -1) {
+                            const afterKonum = htmlText.slice(konumIdx);
+                            const addrM = afterKonum.match(/class="rv"[^>]*>([^<]+)/);
+                            if (addrM?.[1])
+                                fields['address'] = addrM[1].trim();
+                        }
+                        const linkMatches = [...htmlText.matchAll(/href="https?:\/\/([^"]+)"/g)];
+                        for (const lm of linkMatches) {
+                            const url = lm[1];
+                            if (url.includes('linkedin.com'))
+                                fields['linkedin'] = url;
+                            else if (url.includes('maps.google'))
+                                continue;
+                            else if (url.includes('netqr.io'))
+                                continue;
+                            else if (!fields['website'])
+                                fields['website'] = url;
+                        }
+                        if (nmMatch?.[1])
+                            fields['name'] = nmMatch[1].trim();
+                        if (ttMatch?.[1])
+                            fields['title'] = ttMatch[1].trim();
+                        if (coMatch?.[1])
+                            fields['company'] = coMatch[1].trim();
+                        if (telMatch?.[1])
+                            fields['phone'] = telMatch[1].trim();
+                        if (mailMatch?.[1])
+                            fields['email'] = mailMatch[1].trim();
+                        const params = new URLSearchParams();
+                        for (const [k, v] of Object.entries(fields)) {
+                            if (v)
+                                params.set(k, v);
+                        }
+                        const vcardUrl = `https://netqr.io/api/vcard?${params.toString()}`;
+                        const aStyle = 'display:flex;width:100%;padding:12px;border:none;border-radius:12px;background:linear-gradient(to right,#2563eb,#4f46e5);color:#fff;font-size:14px;font-weight:600;cursor:pointer;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 25px -8px rgba(99,102,241,.5);text-decoration:none';
+                        htmlText = htmlText.replace(rehbereButtonRe, `<a href="${vcardUrl}" style="${aStyle}">$1</a>`);
+                        htmlText = htmlText.replace(/<script>\s*function\s+downloadVCard[\s\S]*?<\/script>/i, '');
+                    }
                     res.setHeader('Content-Type', 'text/html; charset=utf-8');
                     res.status(200).send(htmlText);
                     return;

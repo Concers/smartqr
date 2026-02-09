@@ -10,7 +10,11 @@ class AnalyticsService {
     static async trackClick(qrCodeId, req) {
         try {
             const userAgent = req.headers['user-agent'] || '';
-            const ipAddress = req.ip || req.connection.remoteAddress || '';
+            const ipAddress = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+                || req.headers['x-real-ip']
+                || req.ip
+                || req.connection?.remoteAddress
+                || '';
             const deviceType = this.extractDeviceType(userAgent);
             const browser = this.extractBrowser(userAgent);
             console.log(`📊 Analytics: Tracking click for QR ${qrCodeId} from IP ${ipAddress}, device: ${deviceType}, browser: ${browser}`);
@@ -92,19 +96,28 @@ class AnalyticsService {
             count: device._count.deviceType,
         }));
     }
-    static async getOverallStats(userId) {
+    static async getOverallStats(userId, qrId) {
         try {
-            const analyticsWhere = userId ? { qrCode: { userId } } : undefined;
+            const analyticsWhere = {};
+            if (userId)
+                analyticsWhere.qrCode = { userId };
+            if (qrId)
+                analyticsWhere.qrCodeId = qrId;
+            const qrWhere = {};
+            if (userId)
+                qrWhere.userId = userId;
+            if (qrId)
+                qrWhere.id = qrId;
             const [totalQRs, totalClicks, activeQRs, uniqueVisitors, topCountries, deviceBreakdown, browserBreakdown] = await Promise.all([
-                database_1.default.qrCode.count(userId ? { where: { userId } } : undefined),
-                database_1.default.qrAnalytics.count({ where: analyticsWhere }),
+                database_1.default.qrCode.count({ where: qrWhere }),
+                database_1.default.qrAnalytics.count({ where: Object.keys(analyticsWhere).length ? analyticsWhere : undefined }),
                 database_1.default.qrCode.count({
                     where: {
-                        ...(userId ? { userId } : {}),
+                        ...qrWhere,
                         isActive: true,
                     },
                 }),
-                this.getUniqueVisitors(analyticsWhere),
+                this.getUniqueVisitors(Object.keys(analyticsWhere).length ? analyticsWhere : undefined),
                 this.getTopCountries(analyticsWhere, 5),
                 this.getDeviceBreakdown(analyticsWhere),
                 this.getBrowserBreakdown(analyticsWhere),
@@ -122,40 +135,101 @@ class AnalyticsService {
             throw new Error('Failed to get overall stats');
         }
     }
-    static async getDailyStats(userId) {
+    static async getDailyStats(userId, qrId) {
         try {
-            const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const days = 30;
+            const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
             const to = new Date();
+            const where = {
+                accessedAt: { gte: from, lte: to },
+            };
+            if (userId)
+                where.qrCode = { userId };
+            if (qrId)
+                where.qrCodeId = qrId;
             const analytics = await database_1.default.qrAnalytics.findMany({
-                where: {
-                    accessedAt: {
-                        gte: from,
-                        lte: to,
-                    },
-                },
+                where,
                 select: {
                     accessedAt: true,
+                    deviceType: true,
                 },
                 orderBy: {
                     accessedAt: 'desc',
                 },
             });
-            const dailyStats = analytics.reduce((acc, item) => {
+            const dateMap = {};
+            for (let i = 0; i < days; i++) {
+                const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+                const key = d.toISOString().split('T')[0];
+                dateMap[key] = { clicks: 0, mobile: 0, desktop: 0 };
+            }
+            for (const item of analytics) {
                 const date = item.accessedAt.toISOString().split('T')[0];
-                const existing = acc.find((d) => d.date === date);
-                if (existing) {
-                    existing.clicks += 1;
+                if (dateMap[date]) {
+                    dateMap[date].clicks += 1;
+                    if (item.deviceType === 'mobile')
+                        dateMap[date].mobile += 1;
+                    else
+                        dateMap[date].desktop += 1;
                 }
-                else {
-                    acc.push({ date, clicks: 1 });
-                }
-                return acc;
-            }, []);
-            return dailyStats;
+            }
+            return Object.entries(dateMap)
+                .map(([date, stats]) => ({ date, ...stats }))
+                .sort((a, b) => a.date.localeCompare(b.date));
         }
         catch (error) {
             console.error('Error getting daily stats:', error);
             throw new Error('Failed to get daily stats');
+        }
+    }
+    static async getHourlyStats(userId, qrId) {
+        try {
+            const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const where = { accessedAt: { gte: from } };
+            if (userId)
+                where.qrCode = { userId };
+            if (qrId)
+                where.qrCodeId = qrId;
+            const analytics = await database_1.default.qrAnalytics.findMany({
+                where,
+                select: { accessedAt: true },
+            });
+            const hours = Array.from({ length: 24 }, (_, i) => ({ hour: i, clicks: 0 }));
+            for (const item of analytics) {
+                const h = item.accessedAt.getHours();
+                hours[h].clicks += 1;
+            }
+            return hours;
+        }
+        catch (error) {
+            console.error('Error getting hourly stats:', error);
+            throw new Error('Failed to get hourly stats');
+        }
+    }
+    static async getRecentClicks(userId, qrId, limit = 20) {
+        try {
+            const where = {};
+            if (userId)
+                where.qrCode = { userId };
+            if (qrId)
+                where.qrCodeId = qrId;
+            const clicks = await database_1.default.qrAnalytics.findMany({
+                where,
+                include: { qrCode: { select: { shortCode: true } } },
+                orderBy: { accessedAt: 'desc' },
+                take: limit,
+            });
+            return clicks.map(c => ({
+                shortCode: c.qrCode.shortCode,
+                accessedAt: c.accessedAt,
+                deviceType: c.deviceType,
+                browser: c.browser,
+                ipAddress: c.ipAddress,
+            }));
+        }
+        catch (error) {
+            console.error('Error getting recent clicks:', error);
+            throw new Error('Failed to get recent clicks');
         }
     }
     static extractDeviceType(userAgent) {
@@ -184,7 +258,7 @@ class AnalyticsService {
             return 'opera';
         return 'unknown';
     }
-    static async getGeoStats(userId) {
+    static async getGeoStats(userId, qrId) {
         try {
             return [];
         }
@@ -193,9 +267,13 @@ class AnalyticsService {
             throw new Error('Failed to get geo stats');
         }
     }
-    static async getDeviceStats(userId) {
+    static async getDeviceStats(userId, qrId) {
         try {
-            const where = userId ? { qrCode: { userId } } : {};
+            const where = {};
+            if (userId)
+                where.qrCode = { userId };
+            if (qrId)
+                where.qrCodeId = qrId;
             const devices = await database_1.default.qrAnalytics.groupBy({
                 by: ['deviceType'],
                 where,
@@ -213,9 +291,13 @@ class AnalyticsService {
             throw new Error('Failed to get device stats');
         }
     }
-    static async getBrowserStats(userId) {
+    static async getBrowserStats(userId, qrId) {
         try {
-            const where = userId ? { qrCode: { userId } } : {};
+            const where = {};
+            if (userId)
+                where.qrCode = { userId };
+            if (qrId)
+                where.qrCodeId = qrId;
             const browsers = await database_1.default.qrAnalytics.groupBy({
                 by: ['browser'],
                 where,

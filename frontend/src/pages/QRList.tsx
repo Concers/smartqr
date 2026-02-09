@@ -95,9 +95,6 @@ export default function QRListPage() {
 
   const handleCopyUrl = async (url: string) => {
     try {
-<<<<<<< HEAD
-      await navigator.clipboard.writeText(url);
-=======
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(url);
       } else {
@@ -113,7 +110,6 @@ export default function QRListPage() {
         document.execCommand('copy');
         document.body.removeChild(textArea);
       }
->>>>>>> origin/feature/business-card-preview
       // Could add toast notification here
     } catch (err) {
       console.error('Failed to copy:', err);
@@ -306,15 +302,9 @@ export default function QRListPage() {
                             <div className="font-bold text-slate-900 text-sm">{qr.name}</div>
                             <div
                               className="flex items-center gap-2 text-xs text-slate-500 mt-0.5 group/link cursor-pointer"
-<<<<<<< HEAD
-                              onClick={() => handleCopyUrl(qr.type === 'vCard' ? qr.qrCodeUrl : qr.url)}
-                            >
-                              <span className="truncate max-w-[150px]">{qr.type === 'vCard' ? qr.qrCodeUrl : qr.url}</span>
-=======
                               onClick={() => handleCopyUrl(qr.qrCodeUrl)}
                             >
                               <span className="truncate max-w-[150px]">{qr.qrCodeUrl}</span>
->>>>>>> origin/feature/business-card-preview
                               <Copy className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity hover:text-yellow-600" />
                             </div>
                           </div>
@@ -356,7 +346,7 @@ export default function QRListPage() {
                           <button 
                             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" 
                             title="İstatistikler"
-                            onClick={() => window.open(`/analytics/${qr.id}`, '_blank')}
+                            onClick={() => navigate(`/analytics/${qr.id}`)}
                           >
                             <ExternalLink className="w-4 h-4" />
                           </button>

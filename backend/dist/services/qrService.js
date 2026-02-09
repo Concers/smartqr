@@ -64,7 +64,9 @@ class QRService {
             },
         });
         const qrCodeUrl = `${app_1.config.qr.protocol}://${userSubdomain}.${app_1.config.qr.rootDomain}/${shortCode}`;
-        const qrPng = await qrGenerator_1.QRGenerator.generateQRCodePngBuffer(qrCodeUrl);
+        const isWifi = data.destinationUrl.toUpperCase().startsWith('WIFI:');
+        const qrContent = isWifi ? data.destinationUrl : qrCodeUrl;
+        const qrPng = await qrGenerator_1.QRGenerator.generateQRCodePngBuffer(qrContent);
         const stored = await storageService_1.storage.savePng({
             key: `qr/${shortCode}.png`,
             buffer: qrPng,
@@ -76,7 +78,7 @@ class QRService {
         return {
             id: qrCode.id,
             shortCode,
-            qrCodeUrl,
+            qrCodeUrl: isWifi ? qrContent : qrCodeUrl,
             qrCodeImageUrl: stored.publicUrl,
             destinationUrl: data.destinationUrl,
             createdAt: qrCode.createdAt.toISOString(),

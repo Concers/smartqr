@@ -37,11 +37,7 @@ export default function SettingsPage() {
     name: user?.name || 'Admin User',
     email: user?.email || 'admin@smartqr.com',
     phone: '+90 555 123 4567',
-<<<<<<< HEAD
-    company: 'SmartQR Technologies',
-=======
     company: 'netqr.io Technologies',
->>>>>>> origin/feature/business-card-preview
     position: 'System Administrator',
     location: 'İstanbul, Türkiye',
     bio: 'Profesyonel QR kod yönetimi ve analitik çözümleri.'

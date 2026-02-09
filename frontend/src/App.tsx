@@ -34,6 +34,7 @@ export default function App() {
       <Route path="/business-card-preview" element={<BusinessCardPreview />} />
       <Route path="/qr/list" element={<QRListPage />} />
       <Route path="/analytics" element={<AnalyticsPage />} />
+      <Route path="/analytics/:qrId" element={<AnalyticsPage />} />
       <Route path="/pricing" element={<AdminPricingPage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/subdomain" element={<SubdomainRequestPage />} />

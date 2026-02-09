@@ -120,3 +120,4 @@ dump.rdb
 
 backend/uploads
 backend/uploads/qr/deneme.png
+backend/.env

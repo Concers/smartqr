@@ -72,9 +72,6 @@ export default function AdminDashboard() {
 
   const handleCopyUrl = async (url: string) => {
     try {
-<<<<<<< HEAD
-      await navigator.clipboard.writeText(url);
-=======
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(url);
       } else {
@@ -90,7 +87,6 @@ export default function AdminDashboard() {
         document.execCommand('copy');
         document.body.removeChild(textArea);
       }
->>>>>>> origin/feature/business-card-preview
     } catch (err) {
       console.error('Failed to copy:', err);
     }

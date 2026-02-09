@@ -28,6 +28,41 @@ const customDomain_2 = __importDefault(require("./routes/admin/customDomain"));
 const subdomainRequests_1 = __importDefault(require("./routes/admin/subdomainRequests"));
 const qrController_1 = require("./controllers/qrController");
 const app = (0, express_1.default)();
+app.get('/api/vcard', (req, res) => {
+    try {
+        const { name, title: jobTitle, company, email, phone, address, website, linkedin } = req.query;
+        const parts = (name || '').split(' ');
+        const first = parts[0] || '';
+        const last = parts.length > 1 ? parts.slice(1).join(' ') : '';
+        const ensureHttps = (u) => (!u ? '' : /^https?:\/\//i.test(u) ? u : `https://${u}`);
+        const lines = ['BEGIN:VCARD', 'VERSION:3.0'];
+        lines.push(`N:${last};${first};;;`);
+        if (name)
+            lines.push(`FN:${name}`);
+        if (company)
+            lines.push(`ORG:${company}`);
+        if (jobTitle)
+            lines.push(`TITLE:${jobTitle}`);
+        if (phone)
+            lines.push(`TEL;TYPE=CELL:${phone}`);
+        if (email)
+            lines.push(`EMAIL:${email}`);
+        if (address)
+            lines.push(`ADR;TYPE=WORK:;;${address};;;;`);
+        if (website)
+            lines.push(`URL:${ensureHttps(website)}`);
+        if (linkedin)
+            lines.push(`URL:${ensureHttps(linkedin)}`);
+        lines.push('END:VCARD');
+        const vcf = lines.join('\r\n');
+        res.setHeader('Content-Type', 'text/x-vcard; charset=utf-8');
+        res.status(200).send(vcf);
+    }
+    catch (e) {
+        console.error('vCard generation error:', e);
+        res.status(500).json({ error: 'Failed to generate vCard' });
+    }
+});
 app.use((0, helmet_1.default)({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     crossOriginEmbedderPolicy: false,

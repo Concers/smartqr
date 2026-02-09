@@ -28,6 +28,36 @@ import { QRController } from './controllers/qrController';
 
 const app = express();
 
+// vCard endpoint – BEFORE Helmet so iOS Safari can open Contacts natively
+app.get('/api/vcard', (req, res) => {
+  try {
+    const { name, title: jobTitle, company, email, phone, address, website, linkedin } = req.query as Record<string, string>;
+    const parts = (name || '').split(' ');
+    const first = parts[0] || '';
+    const last = parts.length > 1 ? parts.slice(1).join(' ') : '';
+    const ensureHttps = (u: string) => (!u ? '' : /^https?:\/\//i.test(u) ? u : `https://${u}`);
+
+    const lines: string[] = ['BEGIN:VCARD', 'VERSION:3.0'];
+    lines.push(`N:${last};${first};;;`);
+    if (name) lines.push(`FN:${name}`);
+    if (company) lines.push(`ORG:${company}`);
+    if (jobTitle) lines.push(`TITLE:${jobTitle}`);
+    if (phone) lines.push(`TEL;TYPE=CELL:${phone}`);
+    if (email) lines.push(`EMAIL:${email}`);
+    if (address) lines.push(`ADR;TYPE=WORK:;;${address};;;;`);
+    if (website) lines.push(`URL:${ensureHttps(website)}`);
+    if (linkedin) lines.push(`URL:${ensureHttps(linkedin)}`);
+    lines.push('END:VCARD');
+
+    const vcf = lines.join('\r\n');
+    res.setHeader('Content-Type', 'text/x-vcard; charset=utf-8');
+    res.status(200).send(vcf);
+  } catch (e) {
+    console.error('vCard generation error:', e);
+    res.status(500).json({ error: 'Failed to generate vCard' });
+  }
+});
+
 // Security middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },

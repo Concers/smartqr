@@ -15,6 +15,8 @@ router.get('/daily', auth_1.authenticateToken, analyticsController_1.AnalyticsCo
 router.get('/geo', auth_1.authenticateToken, analyticsController_1.AnalyticsController.getGeoStats);
 router.get('/devices', auth_1.authenticateToken, analyticsController_1.AnalyticsController.getDeviceStats);
 router.get('/browsers', auth_1.authenticateToken, analyticsController_1.AnalyticsController.getBrowserStats);
+router.get('/hourly', auth_1.authenticateToken, analyticsController_1.AnalyticsController.getHourlyStats);
+router.get('/clicks', auth_1.authenticateToken, analyticsController_1.AnalyticsController.getRecentClicks);
 router.get('/:id', auth_1.authenticateToken, validation_1.validateUUID, validation_1.validateAnalyticsQuery, async (req, res) => {
     try {
         const { id } = req.params;

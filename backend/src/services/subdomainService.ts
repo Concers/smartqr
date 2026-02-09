@@ -27,21 +27,6 @@ export class SubdomainService {
   }
 
   /**
-   * Rastgele subdomain generate eder
-   * Format: user-{10 karakter random}
-   */
-  generateRandomSubdomain(): string {
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    let randomString = '';
-    
-    for (let i = 0; i < this.SUBDOMAIN_LENGTH; i++) {
-      randomString += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    
-    return `${this.SUBDOMAIN_PREFIX}${randomString}`;
-  }
-
-  /**
    * Kullanıcı ID'sine göre subdomain generate eder
    * Format: user ID'nin ilk 8 karakteri (unique olduğu için collision olmaz)
    */
@@ -99,59 +84,24 @@ export class SubdomainService {
   }
 
   /**
-   * Kullanıcıya benzersiz subdomain atar
-   * Önce ID-based denemesi yapar, o mümkün değilse random subdomain atar
+   * Kullanıcıya ID-based subdomain atar (otomatik, kayıt sırasında)
    */
   async assignSubdomainToUser(userId: string): Promise<string> {
-    // Önce ID-based subdomain'i dene
     try {
-      const idBasedSubdomain = this.generateSubdomainFromUserId(userId);
-      const idAvailable = await this.isSubdomainAvailable(idBasedSubdomain);
+      const subdomain = this.generateSubdomainFromUserId(userId);
       
-      if (idAvailable) {
-        await prisma.user.update({
-          where: { id: userId },
-          data: { subdomain: idBasedSubdomain }
-        });
-        
-        console.log(`✅ ID-based subdomain assigned: ${idBasedSubdomain} for user: ${userId}`);
-        return idBasedSubdomain;
-      }
+      // Subdomain'i ata (history'e eklemeye gerek yok, ilk subdomain)
+      await prisma.user.update({
+        where: { id: userId },
+        data: { subdomain }
+      });
+      
+      console.log(`✅ ID-based subdomain assigned: ${subdomain} for user: ${userId}`);
+      return subdomain;
     } catch (error) {
-      console.log('ID-based subdomain failed, falling back to random:', error);
+      console.error('Failed to assign subdomain:', error);
+      throw new Error('Unable to assign subdomain');
     }
-    
-    // Fallback: random subdomain
-    let attempts = 0;
-    
-    while (attempts < this.MAX_ATTEMPTS) {
-      const subdomain = this.generateRandomSubdomain();
-      
-      try {
-        const available = await this.isSubdomainAvailable(subdomain);
-        
-        if (available) {
-          // Önceki subdomain'i history'e ekle
-          await this.updateSubdomainHistory(userId);
-          
-          // Yeni subdomain'i ata
-          await prisma.user.update({
-            where: { id: userId },
-            data: { subdomain }
-          });
-          
-          console.log(`✅ Random subdomain assigned: ${subdomain} for user: ${userId}`);
-          return subdomain;
-        }
-        
-        attempts++;
-      } catch (error) {
-        console.error(`Attempt ${attempts} failed:`, error);
-        attempts++;
-      }
-    }
-    
-    throw new Error(`Unable to generate unique subdomain after ${this.MAX_ATTEMPTS} attempts`);
   }
 
   /**

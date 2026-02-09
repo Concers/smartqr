@@ -6,7 +6,11 @@ export class AnalyticsService {
   static async trackClick(qrCodeId: string, req: any): Promise<void> {
     try {
       const userAgent = req.headers['user-agent'] || '';
-      const ipAddress = req.ip || req.connection.remoteAddress || '';
+      const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+        || req.headers['x-real-ip'] as string
+        || req.ip
+        || req.connection?.remoteAddress
+        || '';
       
       // Extract device and browser info
       const deviceType = this.extractDeviceType(userAgent);
@@ -119,20 +123,26 @@ export class AnalyticsService {
     }));
   }
 
-  static async getOverallStats(userId?: string): Promise<any> {
+  static async getOverallStats(userId?: string, qrId?: string): Promise<any> {
     try {
-      const analyticsWhere = userId ? { qrCode: { userId } } : undefined;
+      const analyticsWhere: any = {};
+      if (userId) analyticsWhere.qrCode = { userId };
+      if (qrId) analyticsWhere.qrCodeId = qrId;
+
+      const qrWhere: any = {};
+      if (userId) qrWhere.userId = userId;
+      if (qrId) qrWhere.id = qrId;
 
       const [totalQRs, totalClicks, activeQRs, uniqueVisitors, topCountries, deviceBreakdown, browserBreakdown] = await Promise.all([
-        prisma.qrCode.count(userId ? { where: { userId } } : undefined),
-        prisma.qrAnalytics.count({ where: analyticsWhere }),
+        prisma.qrCode.count({ where: qrWhere }),
+        prisma.qrAnalytics.count({ where: Object.keys(analyticsWhere).length ? analyticsWhere : undefined }),
         prisma.qrCode.count({
           where: {
-            ...(userId ? { userId } : {}),
+            ...qrWhere,
             isActive: true,
           },
         }),
-        this.getUniqueVisitors(analyticsWhere),
+        this.getUniqueVisitors(Object.keys(analyticsWhere).length ? analyticsWhere : undefined),
         this.getTopCountries(analyticsWhere, 5),
         this.getDeviceBreakdown(analyticsWhere),
         this.getBrowserBreakdown(analyticsWhere),
@@ -151,43 +161,103 @@ export class AnalyticsService {
     }
   }
 
-  static async getDailyStats(userId?: string): Promise<any> {
+  static async getDailyStats(userId?: string, qrId?: string): Promise<any> {
     try {
-      const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const days = 30;
+      const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
       const to = new Date();
 
-      // Use Prisma Client instead of raw query
+      const where: any = {
+        accessedAt: { gte: from, lte: to },
+      };
+      if (userId) where.qrCode = { userId };
+      if (qrId) where.qrCodeId = qrId;
+
       const analytics = await prisma.qrAnalytics.findMany({
-        where: {
-          accessedAt: {
-            gte: from,
-            lte: to,
-          },
-        },
+        where,
         select: {
           accessedAt: true,
+          deviceType: true,
         },
         orderBy: {
           accessedAt: 'desc',
         },
       });
 
-      // Group by date and count clicks
-      const dailyStats = analytics.reduce((acc: any, item) => {
-        const date = item.accessedAt.toISOString().split('T')[0];
-        const existing = acc.find((d: any) => d.date === date);
-        if (existing) {
-          existing.clicks += 1;
-        } else {
-          acc.push({ date, clicks: 1 });
-        }
-        return acc;
-      }, []);
+      // Build a map with all 30 days filled
+      const dateMap: Record<string, { clicks: number; mobile: number; desktop: number }> = {};
+      for (let i = 0; i < days; i++) {
+        const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+        const key = d.toISOString().split('T')[0];
+        dateMap[key] = { clicks: 0, mobile: 0, desktop: 0 };
+      }
 
-      return dailyStats;
+      for (const item of analytics) {
+        const date = item.accessedAt.toISOString().split('T')[0];
+        if (dateMap[date]) {
+          dateMap[date].clicks += 1;
+          if (item.deviceType === 'mobile') dateMap[date].mobile += 1;
+          else dateMap[date].desktop += 1;
+        }
+      }
+
+      // Return sorted by date ascending
+      return Object.entries(dateMap)
+        .map(([date, stats]) => ({ date, ...stats }))
+        .sort((a, b) => a.date.localeCompare(b.date));
     } catch (error) {
       console.error('Error getting daily stats:', error);
       throw new Error('Failed to get daily stats');
+    }
+  }
+
+  static async getHourlyStats(userId?: string, qrId?: string): Promise<any> {
+    try {
+      const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const where: any = { accessedAt: { gte: from } };
+      if (userId) where.qrCode = { userId };
+      if (qrId) where.qrCodeId = qrId;
+
+      const analytics = await prisma.qrAnalytics.findMany({
+        where,
+        select: { accessedAt: true },
+      });
+
+      const hours = Array.from({ length: 24 }, (_, i) => ({ hour: i, clicks: 0 }));
+      for (const item of analytics) {
+        const h = item.accessedAt.getHours();
+        hours[h].clicks += 1;
+      }
+      return hours;
+    } catch (error) {
+      console.error('Error getting hourly stats:', error);
+      throw new Error('Failed to get hourly stats');
+    }
+  }
+
+  static async getRecentClicks(userId?: string, qrId?: string, limit: number = 20): Promise<any> {
+    try {
+      const where: any = {};
+      if (userId) where.qrCode = { userId };
+      if (qrId) where.qrCodeId = qrId;
+
+      const clicks = await prisma.qrAnalytics.findMany({
+        where,
+        include: { qrCode: { select: { shortCode: true } } },
+        orderBy: { accessedAt: 'desc' },
+        take: limit,
+      });
+
+      return clicks.map(c => ({
+        shortCode: c.qrCode.shortCode,
+        accessedAt: c.accessedAt,
+        deviceType: c.deviceType,
+        browser: c.browser,
+        ipAddress: c.ipAddress,
+      }));
+    } catch (error) {
+      console.error('Error getting recent clicks:', error);
+      throw new Error('Failed to get recent clicks');
     }
   }
 
@@ -215,7 +285,7 @@ export class AnalyticsService {
     return 'unknown';
   }
 
-  static async getGeoStats(userId?: string): Promise<any> {
+  static async getGeoStats(userId?: string, qrId?: string): Promise<any> {
     try {
       // Placeholder: requires geolocation service integration
       return [];
@@ -225,9 +295,11 @@ export class AnalyticsService {
     }
   }
 
-  static async getDeviceStats(userId?: string): Promise<any> {
+  static async getDeviceStats(userId?: string, qrId?: string): Promise<any> {
     try {
-      const where = userId ? { qrCode: { userId } } : {};
+      const where: any = {};
+      if (userId) where.qrCode = { userId };
+      if (qrId) where.qrCodeId = qrId;
       const devices = await prisma.qrAnalytics.groupBy({
         by: ['deviceType'],
         where,
@@ -246,9 +318,11 @@ export class AnalyticsService {
     }
   }
 
-  static async getBrowserStats(userId?: string): Promise<any> {
+  static async getBrowserStats(userId?: string, qrId?: string): Promise<any> {
     try {
-      const where = userId ? { qrCode: { userId } } : {};
+      const where: any = {};
+      if (userId) where.qrCode = { userId };
+      if (qrId) where.qrCodeId = qrId;
       const browsers = await prisma.qrAnalytics.groupBy({
         by: ['browser'],
         where,

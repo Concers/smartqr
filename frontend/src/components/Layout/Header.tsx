@@ -9,11 +9,7 @@ export function Header() {
   return (
     <header className="border-b bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-<<<<<<< HEAD
-        <div className="text-lg font-semibold">SmartQR Admin</div>
-=======
         <div className="text-lg font-semibold">netqr.io Admin</div>
->>>>>>> origin/feature/business-card-preview
         <nav className="hidden gap-2 md:flex">
           <NavLink to="/" className={linkClass} end>
             Ana Sayfa

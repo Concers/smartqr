@@ -109,11 +109,7 @@ export function AdminSidebar({ className = "" }: AdminSidebarProps) {
             <QrCode className="w-6 h-6 text-slate-900" />
           </div>
           <div>
-<<<<<<< HEAD
-            <h1 className="text-xl font-bold tracking-tight text-white">SmartQR</h1>
-=======
             <h1 className="text-xl font-bold tracking-tight text-white">netqr.io</h1>
->>>>>>> origin/feature/business-card-preview
             <p className="text-xs text-slate-400 font-medium">Admin Panel</p>
           </div>
         </div>
