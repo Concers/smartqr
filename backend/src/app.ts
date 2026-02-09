@@ -1,4 +1,3 @@
-import 'module-alias/register';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -24,6 +23,7 @@ import subdomainRequestRoutes from './routes/subdomainRequest';
 import customDomainRoutes from './routes/customDomain';
 import adminCustomDomainRoutes from './routes/admin/customDomain';
 import adminSubdomainRequestsRoutes from './routes/admin/subdomainRequests';
+import subUserRoutes from './routes/subUser';
 import { QRController } from './controllers/qrController';
 
 const app = express();
@@ -156,12 +156,14 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/qr', qrRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/subdomain', subdomainRoutes);
 app.use('/api/subdomain-request', subdomainRequestRoutes);
 app.use('/api/custom-domain', customDomainRoutes);
-app.use('/api/admin', adminCustomDomainRoutes);
-app.use('/api/admin', adminSubdomainRequestsRoutes);
+app.use('/api/admin/custom-domains', adminCustomDomainRoutes);
+app.use('/api/admin/subdomain-requests', adminSubdomainRequestsRoutes);
+app.use('/api/sub-user', subUserRoutes);
 
 // QR code redirect endpoint (no /api prefix)
 app.get(

@@ -14,10 +14,12 @@ import PricingPage from './pages/Pricing';
 import AdminCustomDomainsPage from './pages/AdminCustomDomains';
 import AdminSubdomainRequestsPage from './pages/AdminSubdomainRequests';
 import SubdomainRequestPage from './pages/SubdomainRequest';
+import SubUserManagement from './pages/SubUserManagement';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 import RateLimitPage from './pages/RateLimitPage';
 import ShortCodeRedirectPage from './pages/ShortCodeRedirect';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 export default function App() {
   return (
@@ -28,16 +30,53 @@ export default function App() {
       <Route path="/admin/subdomain-requests" element={<AdminSubdomainRequestsPage />} />
       
       {/* Admin pages - With AdminLayout (no additional wrapper needed) */}
-      <Route path="/qr/generate" element={<QRGenerateSelectPage />} />
-      <Route path="/qr/generate/:type" element={<QRGenerateTypePage />} />
-      <Route path="/qr/generate/business-card" element={<QRGenerateBusinessCardPage />} />
+      <Route path="/qr/generate" element={
+        <ProtectedRoute requiredPermission="qr_create" allowNormalUsers={true}>
+          <QRGenerateSelectPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/qr/generate/:type" element={
+        <ProtectedRoute requiredPermission="qr_create" allowNormalUsers={true}>
+          <QRGenerateTypePage />
+        </ProtectedRoute>
+      } />
+      <Route path="/qr/generate/business-card" element={
+        <ProtectedRoute requiredPermission="qr_create" allowNormalUsers={true}>
+          <QRGenerateBusinessCardPage />
+        </ProtectedRoute>
+      } />
       <Route path="/business-card-preview" element={<BusinessCardPreview />} />
-      <Route path="/qr/list" element={<QRListPage />} />
-      <Route path="/analytics" element={<AnalyticsPage />} />
-      <Route path="/analytics/:qrId" element={<AnalyticsPage />} />
-      <Route path="/pricing" element={<AdminPricingPage />} />
+      <Route path="/qr/list" element={
+        <ProtectedRoute requiredPermission="qr_view" allowNormalUsers={true}>
+          <QRListPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/analytics" element={
+        <ProtectedRoute requiredPermission="analytics_view" allowNormalUsers={true}>
+          <AnalyticsPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/analytics/:qrId" element={
+        <ProtectedRoute requiredPermission="analytics_view" allowNormalUsers={true}>
+          <AnalyticsPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/pricing" element={
+        <ProtectedRoute adminOnly>
+          <AdminPricingPage />
+        </ProtectedRoute>
+      } />
       <Route path="/settings" element={<SettingsPage />} />
-      <Route path="/subdomain" element={<SubdomainRequestPage />} />
+      <Route path="/subdomain" element={
+        <ProtectedRoute adminOnly>
+          <SubdomainRequestPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/sub-users" element={
+        <ProtectedRoute>
+          <SubUserManagement />
+        </ProtectedRoute>
+      } />
       
       {/* Auth pages - Full page without Layout */}
       <Route path="/login" element={<LoginPage />} />

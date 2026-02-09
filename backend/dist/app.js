@@ -26,6 +26,7 @@ const subdomainRequest_1 = __importDefault(require("./routes/subdomainRequest"))
 const customDomain_1 = __importDefault(require("./routes/customDomain"));
 const customDomain_2 = __importDefault(require("./routes/admin/customDomain"));
 const subdomainRequests_1 = __importDefault(require("./routes/admin/subdomainRequests"));
+const subUser_1 = __importDefault(require("./routes/subUser"));
 const qrController_1 = require("./controllers/qrController");
 const app = (0, express_1.default)();
 app.get('/api/vcard', (req, res) => {
@@ -139,12 +140,14 @@ app.get('/health', (req, res) => {
 });
 app.use('/api/qr', qr_1.default);
 app.use('/api/auth', auth_1.default);
+app.use('/api/analytics', analytics_1.default);
 app.use('/api/uploads', uploads_1.default);
 app.use('/api/subdomain', subdomain_1.default);
 app.use('/api/subdomain-request', subdomainRequest_1.default);
 app.use('/api/custom-domain', customDomain_1.default);
-app.use('/api/admin', customDomain_2.default);
-app.use('/api/admin', subdomainRequests_1.default);
+app.use('/api/admin/custom-domains', customDomain_2.default);
+app.use('/api/admin/subdomain-requests', subdomainRequests_1.default);
+app.use('/api/sub-user', subUser_1.default);
 app.get('/:shortCode', domainValidation_1.validateDomain, validation_1.validateShortCode, rateLimit_2.redirectRateLimiter, requestTracking_1.redirectTracking, qrController_1.QRController.redirectQRCode);
 app.use((req, res) => {
     res.status(404).json({

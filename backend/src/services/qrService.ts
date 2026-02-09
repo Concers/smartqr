@@ -132,6 +132,7 @@ export class QRService {
         qrCodeUrl: qr.lockedSubdomain 
           ? `${config.qr.protocol}://${qr.lockedSubdomain}.${config.qr.rootDomain}/${qr.shortCode}`
           : `${config.qr.baseUrl}/${qr.shortCode}`,
+        qrCodeImageUrl: (qr as any).qrImageUrl || '',
         destinationUrl: qr.destinations[0]?.destinationUrl || '',
         createdAt: qr.createdAt.toISOString(),
         expiresAt: qr.destinations[0]?.expiresAt?.toISOString(),

@@ -21,6 +21,7 @@ model User {
   customDomains        CustomDomain[]
   subdomainRequests    SubdomainRequest[]
   qrCodes              QrCode[]
+  subUsers             SubUser[]      // Parent relationship: User -> SubUser
 
   @@map("users")
 }
@@ -42,6 +43,31 @@ model SubdomainRequest {
   @@index([userId])
   @@index([status])
   @@map("subdomain_requests")
+}
+
+model SubUser {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  name        String?
+  isActive    Boolean  @default(true)
+  permissions Json     @default("{}") // { qr_create: true, qr_edit: false, qr_delete: false, analytics_view: true }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastLoginAt DateTime?
+  
+  // Relationships
+  parentUserId String
+  parentUser   User     @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  
+  // Audit fields
+  createdBy   String?
+  updatedBy   String?
+
+  @@unique([parentUserId, email]) // Email must be unique within parent's scope
+  @@index([parentUserId])
+  @@index([isActive])
+  @@map("sub_users")
 }
 
 model QrCode {

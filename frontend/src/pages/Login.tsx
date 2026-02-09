@@ -16,22 +16,57 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
 
   const mutation = useMutation({
-    mutationFn: async () => authService.login(email, password),
+    mutationFn: async () => authService.loginAny(email, password),
+    onMutate: () => {
+      console.log('Mutation starting...');
+    },
     onSuccess: (res) => {
-      const token = res.data?.data?.token;
-      const user = res.data?.data?.user;
-      if (token && user) {
-        login(token, user);
-        navigate('/admin');
+      console.log('Login response:', res);
+      if (res.userType === 'user') {
+        // Normal user login
+        const token = res.data?.token;
+        const user = res.data?.user;
+        console.log('Normal user - Token:', token, 'User:', user);
+        if (token && user) {
+          login(token, { ...user, type: 'user' });
+          navigate('/admin');
+        } else {
+          console.error('Missing token or user for normal user');
+        }
+      } else if (res.userType === 'subuser') {
+        // Sub-user login
+        const token = res.user?.token;
+        const user = res.user;
+        console.log('Sub user - Token:', token, 'User:', user);
+        if (token && user) {
+          login(token, { 
+            ...user, 
+            type: 'subuser',
+            permissions: user.permissions,
+            parentUserId: user.parentUserId
+          });
+          navigate('/admin');
+        } else {
+          console.error('Missing token or user for sub user');
+        }
+      } else {
+        console.error('Unknown user type:', res);
       }
     },
     onError: (error: any) => {
       console.error('Login error:', error);
     },
+    onSettled: () => {
+      console.log('Mutation settled (finished)');
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Login button clicked');
+    console.log('Email:', email);
+    console.log('Password:', password ? '***' : 'empty');
+    console.log('Starting login mutation...');
     mutation.mutate();
   };
 

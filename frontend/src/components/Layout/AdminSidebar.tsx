@@ -8,7 +8,8 @@ import {
   Home,
   Package,
   TestTube,
-  Globe
+  Globe,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -23,7 +24,9 @@ const menuItems = [
     key: 'subdomain-request',
     label: 'Subdomain Talebi',
     icon: Globe,
-    path: '/subdomain'
+    path: '/subdomain',
+    adminOnly: true, // Only admins can request subdomains
+    permission: null, // Admin only check is sufficient
   },
   {
     key: 'admin-subdomain-requests',
@@ -31,24 +34,35 @@ const menuItems = [
     icon: Globe,
     path: '/admin/subdomain-requests',
     adminOnly: true,
+    permission: null, // Admin only
+  },
+  {
+    key: 'sub-users',
+    label: 'Alt Kullanıcılar',
+    icon: Users,
+    path: '/sub-users',
+    permission: 'subuser_manage' // Only users with subuser_manage permission
   },
   {
     key: 'qr-generate',
     label: 'QR Oluştur',
     icon: Plus,
-    path: '/qr/generate'
+    path: '/qr/generate',
+    permission: 'qr_create'
   },
   {
     key: 'qr-list',
     label: 'QR Listesi',
     icon: QrCode,
-    path: '/qr/list'
+    path: '/qr/list',
+    permission: 'qr_view'
   },
   {
     key: 'analytics',
     label: 'Analitikler',
     icon: BarChart3,
-    path: '/analytics'
+    path: '/analytics',
+    permission: 'analytics_view'
   },
   {
     key: 'packages',
@@ -71,7 +85,7 @@ interface AdminSidebarProps {
 export function AdminSidebar({ className = "" }: AdminSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, canManageSubUsers, hasPermission } = useAuth();
 
   const adminEmails = ['admin@netqr.io', 'admin@admin.com'];
   const isAdmin = !!user?.email && adminEmails.includes(user.email);
@@ -137,7 +151,21 @@ export function AdminSidebar({ className = "" }: AdminSidebarProps) {
       <nav className="flex-1 p-4">
         <div className="space-y-1">
           {menuItems
-            .filter((item: any) => (item.adminOnly ? isAdmin : true))
+            .filter((item: any) => {
+              // Check admin-only items
+              if (item.adminOnly && !isAdmin) return false;
+              
+              // Only apply permission checks for sub-users
+              if (user?.type === 'subuser') {
+                // Check permission requirements for sub-users
+                if (item.permission && !hasPermission(item.permission)) return false;
+                
+                // Special handling for sub-users (legacy)
+                if (item.key === 'sub-users' && !canManageSubUsers()) return false;
+              }
+              
+              return true;
+            })
             .map((item: any) => {
             const Icon = item.icon;
             const active = isActive(item.path);

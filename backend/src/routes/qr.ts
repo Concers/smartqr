@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { QRController } from '@/controllers/qrController';
 import { authenticateToken } from '@/middleware/auth';
+import { requirePermission } from '@/middleware/subUserAuth';
 import { 
   validateCreateQR, 
   validateUpdateDestination, 
@@ -15,6 +16,7 @@ const router = Router();
 // Protected QR code management routes
 router.post('/',
   authenticateToken,
+  requirePermission('qr_create'),
   qrRateLimiter,
   validateCreateQR,
   QRController.createQRCode
@@ -23,6 +25,7 @@ router.post('/',
 // Alias: POST /api/qr/generate
 router.post('/generate',
   authenticateToken,
+  requirePermission('qr_create'),
   qrRateLimiter,
   validateCreateQR,
   QRController.createQRCode
@@ -30,6 +33,7 @@ router.post('/generate',
 
 router.get('/',
   authenticateToken,
+  requirePermission('qr_view'),
   qrRateLimiter,
   validatePagination,
   QRController.getQRCodes
@@ -38,6 +42,7 @@ router.get('/',
 // Alias: GET /api/qr/list
 router.get('/list',
   authenticateToken,
+  requirePermission('qr_view'),
   qrRateLimiter,
   validatePagination,
   QRController.getQRCodes

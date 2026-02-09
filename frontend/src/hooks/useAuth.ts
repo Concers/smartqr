@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 type User = {
   id: string;
   email: string;
   name?: string;
+  permissions?: any;
+  type?: 'user' | 'subuser';
+  parentUserId?: string;
 };
 
 type AuthState = {
@@ -54,5 +57,21 @@ export function useAuth() {
     setState(newState);
   };
 
-  return { ...state, login, logout, isAuthenticated: !!state.token };
+  return { 
+    ...state, 
+    login, 
+    logout, 
+    isAuthenticated: !!state.token,
+    isSubUser: state.user?.type === 'subuser',
+    hasPermission: useCallback((permission: string) => {
+      if (!state.user?.permissions) return false;
+      return state.user.permissions[permission] === true;
+    }, [state.user?.permissions]),
+    canManageSubUsers: useCallback(() => {
+      // Normal users can always manage sub-users
+      if (state.user?.type !== 'subuser') return true;
+      // Sub-users need subuser_manage permission
+      return state.user?.permissions?.subuser_manage === true;
+    }, [state.user?.type, state.user?.permissions])
+  };
 }

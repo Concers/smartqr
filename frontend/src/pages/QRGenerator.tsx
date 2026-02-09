@@ -1251,8 +1251,15 @@ export default function QRGeneratorPage({ initialType }: { initialType?: string 
                         if (!result.qrCodeImageUrl) return;
                         try {
                           const res = await fetch(result.qrCodeImageUrl);
+                          if (!res.ok) {
+                            throw new Error(`Download failed: ${res.status}`);
+                          }
+                          const contentType = res.headers.get('content-type') || '';
                           const blob = await res.blob();
-                          const url = URL.createObjectURL(blob);
+                          const finalBlob = blob.type
+                            ? blob
+                            : new Blob([blob], { type: contentType || 'image/png' });
+                          const url = URL.createObjectURL(finalBlob);
                           const a = document.createElement('a');
                           a.href = url;
                           a.download = `${result.shortCode}.png`;

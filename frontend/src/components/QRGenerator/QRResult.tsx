@@ -29,8 +29,15 @@ export function QRResult({ data }: { data: QRResultData }) {
   const download = async () => {
     if (!data.qrCodeImageUrl) return;
     const res = await fetch(data.qrCodeImageUrl);
+    if (!res.ok) {
+      throw new Error(`Download failed: ${res.status}`);
+    }
+    const contentType = res.headers.get('content-type') || '';
     const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
+    const finalBlob = blob.type
+      ? blob
+      : new Blob([blob], { type: contentType || 'image/png' });
+    const url = URL.createObjectURL(finalBlob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `${data.shortCode}.png`;

@@ -34,6 +34,8 @@ export default function QRListPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'Website' | 'vCard'>('all');
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any | undefined>();
+  const [qrPreviewOpen, setQrPreviewOpen] = useState(false);
+  const [qrPreviewItem, setQrPreviewItem] = useState<any | undefined>();
 
   const { data, isLoading } = useQuery({
     queryKey: ['qrList', page, search],
@@ -119,8 +121,15 @@ export default function QRListPage() {
   const handleDownload = async (qrCodeImageUrl: string, shortCode: string) => {
     try {
       const res = await fetch(qrCodeImageUrl);
+      if (!res.ok) {
+        throw new Error(`Download failed: ${res.status}`);
+      }
+      const contentType = res.headers.get('content-type') || '';
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      const finalBlob = blob.type
+        ? blob
+        : new Blob([blob], { type: contentType || 'image/png' });
+      const url = URL.createObjectURL(finalBlob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `${shortCode}.png`;
@@ -295,9 +304,17 @@ export default function QRListPage() {
                       {/* İsim ve URL */}
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400">
+                          <button
+                            type="button"
+                            className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+                            title="QR Önizleme"
+                            onClick={() => {
+                              setQrPreviewItem(qr);
+                              setQrPreviewOpen(true);
+                            }}
+                          >
                             <QrCode className="w-5 h-5" />
-                          </div>
+                          </button>
                           <div>
                             <div className="font-bold text-slate-900 text-sm">{qr.name}</div>
                             <div
@@ -433,6 +450,72 @@ export default function QRListPage() {
             });
           }}
         />
+      )}
+
+      {qrPreviewOpen && qrPreviewItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+          onClick={() => {
+            setQrPreviewOpen(false);
+            setQrPreviewItem(undefined);
+          }}
+        >
+          <div
+            className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">QR Önizleme</div>
+                <div className="text-xs text-slate-500 mt-0.5">{qrPreviewItem.shortCode}</div>
+              </div>
+              <button
+                type="button"
+                className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                onClick={() => {
+                  setQrPreviewOpen(false);
+                  setQrPreviewItem(undefined);
+                }}
+              >
+                Kapat
+              </button>
+            </div>
+
+            <div className="p-6">
+              {qrPreviewItem.qrCodeImageUrl ? (
+                <div className="flex items-center justify-center">
+                  <img
+                    src={qrPreviewItem.qrCodeImageUrl}
+                    alt="QR Code"
+                    className="w-64 h-64 object-contain bg-white border border-slate-200 rounded-xl"
+                  />
+                </div>
+              ) : (
+                <div className="text-sm text-slate-600">
+                  Bu QR için görsel bulunamadı.
+                </div>
+              )}
+
+              <div className="mt-5 flex gap-2 justify-end">
+                <button
+                  type="button"
+                  className="px-4 py-2 text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                  onClick={() => handleCopyUrl(qrPreviewItem.qrCodeUrl)}
+                >
+                  Linki Kopyala
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
+                  onClick={() => handleDownload(qrPreviewItem.qrCodeImageUrl, qrPreviewItem.shortCode)}
+                  disabled={!qrPreviewItem.qrCodeImageUrl}
+                >
+                  İndir
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </AdminLayout>
   );

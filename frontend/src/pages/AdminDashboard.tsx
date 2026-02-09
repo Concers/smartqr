@@ -21,11 +21,16 @@ import {
   Clock,
   Globe,
   Smartphone,
-  Monitor
+  Monitor,
+  Settings,
+  UserCheck,
+  UserX,
+  Shield
 } from 'lucide-react';
 import { AdminLayout } from '../components/Layout/AdminLayout';
 import { qrService } from '../services/qrService';
 import { useAuth } from '../hooks/useAuth';
+import subUserService from '../services/subUserService';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -39,6 +44,14 @@ export default function AdminDashboard() {
     queryKey: ['qrList', 1, 10], // First page, 10 items
     queryFn: () => qrService.list(1, 10).then((r) => r.data),
     enabled: true,
+  });
+
+  // Fetch sub-user statistics
+  const { data: subUserData } = useQuery({
+    queryKey: ['subUserStats'],
+    queryFn: () => subUserService.getSubUserStats(),
+    enabled: true,
+    refetchOnWindowFocus: false, // Prevent excessive refetching
   });
 
   // Transform real data to match our interface
@@ -61,7 +74,10 @@ export default function AdminDashboard() {
     activeQRs: recentQRCodes.filter((qr: any) => qr.status === 'active').length,
     totalScans: recentQRCodes.reduce((sum: number, qr: any) => sum + qr.scans, 0),
     thisMonthScans: Math.floor(recentQRCodes.reduce((sum: number, qr: any) => sum + qr.scans, 0) * 0.3), // Estimate
-    conversionRate: 24.5 // Mock data
+    conversionRate: 24.5, // Mock data
+    totalSubUsers: subUserData?.total || 0,
+    activeSubUsers: subUserData?.active || 0,
+    inactiveSubUsers: subUserData?.inactive || 0,
   };
 
   const filteredQRCodes = recentQRCodes.filter((qr: any) =>
@@ -106,7 +122,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-blue-50 rounded-lg">
@@ -125,24 +141,35 @@ export default function AdminDashboard() {
               </div>
               <span className="text-sm text-green-600 font-medium">+8%</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900">32</div>
+            <div className="text-2xl font-bold text-slate-900">{stats.totalScans.toLocaleString()}</div>
             <div className="text-sm text-slate-500">Toplam Tıklama</div>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-purple-50 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
+                <Users className="w-6 h-6 text-purple-600" />
               </div>
-              <span className="text-sm text-green-600 font-medium">+15%</span>
+              <span className="text-sm text-green-600 font-medium">+{stats.totalSubUsers > 0 ? '2' : '0'}</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900"></div>
-            <div className="text-sm text-slate-500">Bu Ay Tarama</div>
+            <div className="text-2xl font-bold text-slate-900">{stats.totalSubUsers}</div>
+            <div className="text-sm text-slate-500">Alt Kullanıcı</div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-orange-50 rounded-lg">
+                <UserCheck className="w-6 h-6 text-orange-600" />
+              </div>
+              <span className="text-sm text-green-600 font-medium">{stats.totalSubUsers > 0 ? Math.round((stats.activeSubUsers / stats.totalSubUsers) * 100) : 0}%</span>
+            </div>
+            <div className="text-2xl font-bold text-slate-900">{stats.activeSubUsers}</div>
+            <div className="text-sm text-slate-500">Aktif Alt Kullanıcı</div>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <button 
             onClick={() => navigate('/qr/generate')}
             className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all group"
@@ -151,11 +178,27 @@ export default function AdminDashboard() {
               <div className="text-left">
                 <div className="flex items-center gap-3 mb-2">
                   <Plus className="w-6 h-6" />
-                  <span className="text-lg font-semibold">Yeni QR Kod Oluştur</span>
+                  <span className="text-lg font-semibold">Yeni QR Kod</span>
                 </div>
-                <p className="text-blue-100 text-sm">Hemen yeni bir QR kodu oluşturun</p>
+                <p className="text-blue-100 text-sm">Hemen QR kodu oluştur</p>
               </div>
               <ChevronRight className="w-5 h-5 text-blue-200 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </button>
+
+          <button 
+            onClick={() => navigate('/qr/list')}
+            className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="text-left">
+                <div className="flex items-center gap-3 mb-2">
+                  <QrCode className="w-6 h-6" />
+                  <span className="text-lg font-semibold">QR Listesi</span>
+                </div>
+                <p className="text-indigo-100 text-sm">Tüm QR kodlarını gör</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-indigo-200 group-hover:translate-x-1 transition-transform" />
             </div>
           </button>
 
@@ -167,27 +210,27 @@ export default function AdminDashboard() {
               <div className="text-left">
                 <div className="flex items-center gap-3 mb-2">
                   <BarChart3 className="w-6 h-6" />
-                  <span className="text-lg font-semibold">Analitikleri Gör</span>
+                  <span className="text-lg font-semibold">Analitikler</span>
                 </div>
-                <p className="text-green-100 text-sm">Detaylı performans raporları</p>
+                <p className="text-green-100 text-sm">Performans raporları</p>
               </div>
               <ChevronRight className="w-5 h-5 text-green-200 group-hover:translate-x-1 transition-transform" />
             </div>
           </button>
 
           <button 
-            onClick={() => navigate('/pricing')}
-            className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all group"
+            onClick={() => navigate('/sub-users')}
+            className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all group"
           >
             <div className="flex items-center justify-between">
               <div className="text-left">
                 <div className="flex items-center gap-3 mb-2">
                   <Users className="w-6 h-6" />
-                  <span className="text-lg font-semibold">Paket Yönetimi</span>
+                  <span className="text-lg font-semibold">Alt Kullanıcılar</span>
                 </div>
-                <p className="text-purple-100 text-sm">Kullanıcı ve paket yönetimi</p>
+                <p className="text-orange-100 text-sm">Kullanıcıları yönet</p>
               </div>
-              <ChevronRight className="w-5 h-5 text-purple-200 group-hover:translate-x-1 transition-transform" />
+              <ChevronRight className="w-5 h-5 text-orange-200 group-hover:translate-x-1 transition-transform" />
             </div>
           </button>
         </div>

@@ -2,7 +2,34 @@ import * as jwt from 'jsonwebtoken';
 import type { RequestHandler } from 'express';
 import { Request, Response, NextFunction } from 'express';
 import { config } from '@/config/app';
-import prisma from '@/config/database';
+
+type AuthErrorCode = 'AUTH_REQUIRED' | 'AUTH_INVALID' | 'AUTH_EXPIRED';
+
+const sendAuthError = (res: Response, code: AuthErrorCode, message: string) => {
+  res.status(401).json({
+    success: false,
+    error: {
+      code,
+      message,
+    },
+  });
+};
+
+const parseTokenPayload = (decoded: any) => {
+  const isSubUser = decoded?.type === 'subuser' || !!decoded?.subUserId || !!decoded?.parentUserId;
+
+  // Standardized user id: userId is always the parent/owner user id
+  const userId = (decoded?.userId || decoded?.parentUserId) as string | undefined;
+  const subUserId = (decoded?.subUserId || decoded?.id) as string | undefined;
+
+  return {
+    isSubUser,
+    userId,
+    subUserId,
+    email: decoded?.email as string | undefined,
+    permissions: decoded?.permissions,
+  };
+};
 
 export const authenticateToken: RequestHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -10,41 +37,53 @@ export const authenticateToken: RequestHandler = async (req: Request, res: Respo
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
-      res.status(401).json({ error: 'Access token required' });
+      sendAuthError(res, 'AUTH_REQUIRED', 'Access token required');
       return;
     }
 
     const decoded = jwt.verify(token, config.jwt.secret) as any;
-    
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-      },
-    });
 
-    if (!user) {
-      res.status(401).json({ error: 'Invalid token' });
+    const payload = parseTokenPayload(decoded);
+    if (typeof payload.userId !== 'string' || !payload.userId) {
+      sendAuthError(res, 'AUTH_INVALID', 'Invalid token: missing userId');
       return;
     }
 
+    if (payload.isSubUser) {
+      (req as any).subUser = {
+        userId: payload.userId,
+        subUserId: payload.subUserId,
+        email: payload.email,
+        type: 'subuser',
+        permissions: payload.permissions,
+      };
+    }
+
+    // Unified request user: always the owner/parent user
     req.user = {
-      id: user.id,
-      email: user.email,
-      name: user.name ?? null,
-    };
+      id: payload.userId,
+      email: payload.email,
+      name: null,
+      ...(payload.isSubUser
+        ? {
+            subUserId: payload.subUserId,
+            type: 'subuser',
+            permissions: payload.permissions,
+          }
+        : {
+            type: 'user',
+          }),
+    } as any;
+
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
-      res.status(401).json({ error: 'Invalid token' });
+      sendAuthError(res, 'AUTH_INVALID', 'Invalid token');
     } else if (error instanceof jwt.TokenExpiredError) {
-      res.status(401).json({ error: 'Token expired' });
+      sendAuthError(res, 'AUTH_EXPIRED', 'Token expired');
     } else {
       console.error('Auth middleware error:', error);
-      res.status(500).json({ error: 'Authentication error' });
+      sendAuthError(res, 'AUTH_INVALID', 'Authentication failed');
     }
   }
 };
@@ -56,21 +95,33 @@ export const optionalAuth: RequestHandler = async (req: Request, res: Response, 
 
     if (token) {
       const decoded = jwt.verify(token, config.jwt.secret) as any;
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-        },
-      });
 
-      if (user) {
+      const payload = parseTokenPayload(decoded);
+      if (typeof payload.userId === 'string' && payload.userId) {
+        if (payload.isSubUser) {
+          (req as any).subUser = {
+            userId: payload.userId,
+            subUserId: payload.subUserId,
+            email: payload.email,
+            type: 'subuser',
+            permissions: payload.permissions,
+          };
+        }
+
         req.user = {
-          id: user.id,
-          email: user.email,
-          name: user.name ?? null,
-        };
+          id: payload.userId,
+          email: payload.email,
+          name: null,
+          ...(payload.isSubUser
+            ? {
+                subUserId: payload.subUserId,
+                type: 'subuser',
+                permissions: payload.permissions,
+              }
+            : {
+                type: 'user',
+              }),
+        } as any;
       }
     }
 

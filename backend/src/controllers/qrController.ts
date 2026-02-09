@@ -9,6 +9,10 @@ export class QRController {
   static async createQRCode(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;
+      console.log('QR Creation - User ID:', userId);
+      console.log('QR Creation - Request body:', req.body);
+      console.log('QR Creation - Full user object:', req.user);
+      
       const qrCode = await QRService.createQRCode(req.body, userId);
 
       res.status(201).json({
@@ -18,7 +22,7 @@ export class QRController {
       });
     } catch (error: any) {
       console.error('Create QR code error:', error);
-      res.status(400).json({
+      res.status(500).json({
         success: false,
         error: error.message || 'Failed to create QR code',
       });
@@ -47,11 +51,18 @@ export class QRController {
   static async getQRCodes(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        });
+        return;
+      }
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       const search = req.query.search as string;
 
-      const result = await QRService.getQRCodesByUser(userId!, page, limit, search);
+      const result = await QRService.getQRCodesByUser(userId, page, limit, search);
 
       res.json({
         success: true,
@@ -64,7 +75,14 @@ export class QRController {
         },
       });
     } catch (error: any) {
-      console.error('Get QR codes error:', error);
+      console.error('Get QR codes error:', {
+        message: error?.message,
+        userId: req.user?.id,
+        page: req.query.page,
+        limit: req.query.limit,
+        search: req.query.search,
+        stack: error?.stack,
+      });
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to get QR codes',
