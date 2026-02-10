@@ -16,14 +16,6 @@ const deriveUsernameFromEmail = (email?: string | null): string => {
   return normalized;
 };
 
-const generateRandomSubdomain = (): string => {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-};
 
 const parseRequestedUsernameFromHost = (host?: string | null): string => {
   const h = (host || '').toLowerCase();

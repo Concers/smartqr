@@ -24,6 +24,7 @@ import customDomainRoutes from './routes/customDomain';
 import adminCustomDomainRoutes from './routes/admin/customDomain';
 import adminSubdomainRequestsRoutes from './routes/admin/subdomainRequests';
 import subUserRoutes from './routes/subUser';
+import pricingRoutes from './routes/pricing';
 import { QRController } from './controllers/qrController';
 
 const app = express();
@@ -164,6 +165,7 @@ app.use('/api/custom-domain', customDomainRoutes);
 app.use('/api/admin/custom-domains', adminCustomDomainRoutes);
 app.use('/api/admin/subdomain-requests', adminSubdomainRequestsRoutes);
 app.use('/api/sub-user', subUserRoutes);
+app.use('/api/pricing', pricingRoutes);
 
 // QR code redirect endpoint (no /api prefix)
 app.get(

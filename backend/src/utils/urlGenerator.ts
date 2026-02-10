@@ -1,9 +1,15 @@
 import { User } from '@prisma/client';
+import { config } from '@/config/app';
 
 /**
  * Generate QR URL based on user's custom domain settings or locked subdomain
  */
 export const generateQRUrl = (shortCode: string, user: User | null, lockedSubdomain?: string | null): string => {
+  // Development: use localhost
+  if (config.nodeEnv === 'development') {
+    return `http://localhost:3001/${shortCode}`;
+  }
+
   // If QR has a locked subdomain, always use it
   if (lockedSubdomain) {
     return `https://${lockedSubdomain}.netqr.io/${shortCode}`;
@@ -80,6 +86,6 @@ export const isValidCustomDomain = (domain: string): boolean => {
  * Validate subdomain format
  */
 export const isValidSubdomain = (subdomain: string): boolean => {
-  const subdomainRegex = /^user-[a-z0-9]{10}$/;
+  const subdomainRegex = /^netqr-[a-z0-9]{10}$/;
   return subdomainRegex.test(subdomain);
 };

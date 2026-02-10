@@ -95,6 +95,29 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 /**
+ * GET /api/sub-user/stats
+ * Get sub-user statistics for the parent user
+ */
+router.get('/stats', authenticateToken, async (req, res) => {
+  try {
+    const parentUserId = req.user?.id;
+    if (!parentUserId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const stats = await subUserService.getSubUserStats(parentUserId);
+
+    res.json({ stats });
+  } catch (error: any) {
+    console.error('Error fetching sub-user stats:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch statistics',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+/**
  * GET /api/sub-user/:id
  * Get a specific sub-user by ID (parent user only)
  */
@@ -250,29 +273,6 @@ router.post('/login', async (req, res) => {
     
     res.status(500).json({ 
       error: 'Failed to authenticate',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-
-/**
- * GET /api/sub-user/stats
- * Get sub-user statistics for the parent user
- */
-router.get('/stats', authenticateToken, async (req, res) => {
-  try {
-    const parentUserId = req.user?.id;
-    if (!parentUserId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const stats = await subUserService.getSubUserStats(parentUserId);
-
-    res.json({ stats });
-  } catch (error: any) {
-    console.error('Error fetching sub-user stats:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch statistics',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

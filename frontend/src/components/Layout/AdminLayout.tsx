@@ -7,7 +7,7 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-background dark:bg-slate-900 flex">
       <AdminSidebar />
       <div className="flex-1 flex flex-col">
         {/* Main Content - No top header, navigation handled by sidebar */}

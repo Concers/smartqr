@@ -115,7 +115,7 @@ export function AdminSidebar({ className = "" }: AdminSidebarProps) {
   };
 
   return (
-    <div className={`w-64 bg-slate-900 text-white min-h-screen flex flex-col ${className}`}>
+    <div className={`w-64 bg-slate-900 dark:bg-slate-950 text-white min-h-screen flex flex-col ${className}`}>
       {/* Logo Section */}
       <div className="p-6 border-b border-slate-800">
         <div className="flex items-center gap-3 mb-4">

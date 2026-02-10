@@ -18,123 +18,41 @@ import {
   Filter
 } from 'lucide-react';
 import { AdminLayout } from '../components/Layout/AdminLayout';
+import { pricingService, Package as PackageType, Purchase, Invoice } from '../services/pricingService';
 
 export default function AdminPricingPage() {
   const [activeTab, setActiveTab] = useState<'packages' | 'purchases' | 'invoices'>('packages');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Mock data for packages
-  const packages = [
-    {
-      id: 1,
-      name: 'Başlangıç',
-      price: '₺49',
-      period: '/ay',
-      icon: Package,
-      color: 'bg-blue-500',
-      features: ['10 QR Kodu', '1,000 Tarama/ay', 'Temel Analitik', 'Email Destek'],
-      popular: false,
-      activeUsers: 45
-    },
-    {
-      id: 2,
-      name: 'Profesyonel',
-      price: '₺149',
-      period: '/ay',
-      icon: Crown,
-      color: 'bg-yellow-500',
-      features: ['100 QR Kodu', '10,000 Tarama/ay', 'Gelişmiş Analitik', 'Öncelikli Destek', 'Özelleştirme'],
-      popular: true,
-      activeUsers: 128
-    },
-    {
-      id: 3,
-      name: 'Kurumsal',
-      price: '₺499',
-      period: '/ay',
-      icon: Building,
-      color: 'bg-purple-500',
-      features: ['Sınırsız QR Kodu', 'Sınırsız Tarama', 'API Erişimi', 'Özel Panel', '7/24 Destek', 'White Label'],
-      popular: false,
-      activeUsers: 23
-    }
-  ];
+  // Fetch real data
+  const { data: packages, isLoading: packagesLoading } = useQuery({
+    queryKey: ['pricingPackages'],
+    queryFn: () => pricingService.getPackages(),
+    refetchOnWindowFocus: false,
+  });
 
-  // Mock data for purchases
-  const purchases = [
-    {
-      id: 1,
-      userName: 'Ahmet Yılmaz',
-      userEmail: 'ahmet@example.com',
-      packageName: 'Profesyonel',
-      price: '₺149',
-      date: '15.01.2026',
-      status: 'active',
-      nextBilling: '15.02.2026',
-      paymentMethod: 'Kredi Kartı'
-    },
-    {
-      id: 2,
-      userName: 'Ayşe Demir',
-      userEmail: 'ayse@example.com',
-      packageName: 'Başlangıç',
-      price: '₺49',
-      date: '10.01.2026',
-      status: 'active',
-      nextBilling: '10.02.2026',
-      paymentMethod: 'Banka Havalesi'
-    },
-    {
-      id: 3,
-      userName: 'Mehmet Kaya',
-      userEmail: 'mehmet@example.com',
-      packageName: 'Kurumsal',
-      price: '₺499',
-      date: '05.01.2026',
-      status: 'cancelled',
-      nextBilling: '-',
-      paymentMethod: 'Kredi Kartı'
-    }
-  ];
+  const { data: purchases, isLoading: purchasesLoading } = useQuery({
+    queryKey: ['pricingPurchases'],
+    queryFn: () => pricingService.getPurchases(),
+    refetchOnWindowFocus: false,
+  });
 
-  // Mock data for invoices
-  const invoices = [
-    {
-      id: 'INV-2026-001',
-      userName: 'Ahmet Yılmaz',
-      packageName: 'Profesyonel',
-      amount: '₺149',
-      date: '15.01.2026',
-      dueDate: '15.01.2026',
-      status: 'paid',
-      downloadUrl: '#'
-    },
-    {
-      id: 'INV-2026-002',
-      userName: 'Ayşe Demir',
-      packageName: 'Başlangıç',
-      amount: '₺49',
-      date: '10.01.2026',
-      dueDate: '10.01.2026',
-      status: 'paid',
-      downloadUrl: '#'
-    },
-    {
-      id: 'INV-2026-003',
-      userName: 'Mehmet Kaya',
-      packageName: 'Kurumsal',
-      amount: '₺499',
-      date: '05.01.2026',
-      dueDate: '05.01.2026',
-      status: 'overdue',
-      downloadUrl: '#'
-    }
-  ];
+  const { data: invoices, isLoading: invoicesLoading } = useQuery({
+    queryKey: ['pricingInvoices'],
+    queryFn: () => pricingService.getInvoices(),
+    refetchOnWindowFocus: false,
+  });
 
-  const filteredPurchases = purchases.filter(p => 
-    p.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.packageName.toLowerCase().includes(searchTerm.toLowerCase())
+  // Fetch stats data
+  const { data: stats } = useQuery({
+    queryKey: ['pricingStats'],
+    queryFn: () => pricingService.getStats(),
+    refetchOnWindowFocus: false,
+  });
+
+  const filteredPurchases = (purchases || []).filter(p => 
+    (p.userId && p.userId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (p.packageName && p.packageName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -175,45 +93,37 @@ export default function AdminPricingPage() {
         {activeTab === 'packages' && (
           <div className="space-y-8">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white p-6 rounded-xl border border-slate-200">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-slate-500">Toplam Gelir</span>
                   <TrendingUp className="w-4 h-4 text-green-500" />
                 </div>
-                <div className="text-2xl font-bold text-slate-900">₺12,847</div>
-                <div className="text-xs text-green-600 mt-1">+12% bu ay</div>
+                <div className="text-2xl font-bold text-slate-900">₺{stats?.totalRevenue || 0}</div>
+                <div className="text-xs text-green-600 mt-1">+{stats?.monthlyGrowth?.revenue || 0}% bu ay</div>
               </div>
               <div className="bg-white p-6 rounded-xl border border-slate-200">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-slate-500">Aktif Kullanıcı</span>
                   <Users className="w-4 h-4 text-blue-500" />
                 </div>
-                <div className="text-2xl font-bold text-slate-900">196</div>
-                <div className="text-xs text-blue-600 mt-1">+8 bu ay</div>
+                <div className="text-2xl font-bold text-slate-900">{stats?.activeUsers || 0}</div>
+                <div className="text-xs text-blue-600 mt-1">+{stats?.monthlyGrowth?.users || 0} bu ay</div>
               </div>
               <div className="bg-white p-6 rounded-xl border border-slate-200">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-slate-500">Toplam QR</span>
                   <QrCode className="w-4 h-4 text-purple-500" />
                 </div>
-                <div className="text-2xl font-bold text-slate-900">8,432</div>
-                <div className="text-xs text-purple-600 mt-1">+156 bu ay</div>
-              </div>
-              <div className="bg-white p-6 rounded-xl border border-slate-200">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-slate-500">Yenileme Oranı</span>
-                  <Zap className="w-4 h-4 text-yellow-500" />
-                </div>
-                <div className="text-2xl font-bold text-slate-900">87%</div>
-                <div className="text-xs text-yellow-600 mt-1">+2% bu ay</div>
+                <div className="text-2xl font-bold text-slate-900">{stats?.userQRs || 0}</div>
+                <div className="text-xs text-purple-600 mt-1">Sizin QR'larınız</div>
               </div>
             </div>
 
             {/* Package Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {packages.map((pkg) => {
-                const Icon = pkg.icon;
+              {(packages || []).map((pkg) => {
+                const Icon = pkg.id === 'starter' ? Package : pkg.id === 'professional' ? Crown : Building;
                 return (
                   <div key={pkg.id} className={`relative bg-white rounded-2xl border-2 ${
                     pkg.popular ? 'border-yellow-400 shadow-lg' : 'border-slate-200'
@@ -226,12 +136,12 @@ export default function AdminPricingPage() {
                     
                     <div className="p-8">
                       <div className="flex items-center justify-between mb-6">
-                        <div className={`w-12 h-12 ${pkg.color} rounded-xl flex items-center justify-center`}>
+                        <div className={`w-12 h-12 ${pkg.id === 'starter' ? 'bg-blue-500' : pkg.id === 'professional' ? 'bg-yellow-500' : 'bg-purple-500'} rounded-xl flex items-center justify-center`}>
                           <Icon className="w-6 h-6 text-white" />
                         </div>
                         <div className="text-right">
-                          <div className="text-3xl font-bold text-slate-900">{pkg.price}</div>
-                          <div className="text-sm text-slate-500">{pkg.period}</div>
+                          <div className="text-3xl font-bold text-slate-900">₺{pkg.price}</div>
+                          <div className="text-sm text-slate-500">/{pkg.period === 'monthly' ? 'ay' : 'yıl'}</div>
                         </div>
                       </div>
                       
@@ -302,33 +212,35 @@ export default function AdminPricingPage() {
                     <tr key={purchase.id} className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="p-4">
                         <div>
-                          <div className="font-medium text-slate-900">{purchase.userName}</div>
-                          <div className="text-sm text-slate-500">{purchase.userEmail}</div>
+                          <div className="font-medium text-slate-900">Kullanıcı #{purchase.userId.slice(0, 8)}</div>
+                          <div className="text-sm text-slate-500">user@example.com</div>
                         </div>
                       </td>
                       <td className="p-4">
                         <span className="font-medium text-slate-900">{purchase.packageName}</span>
                       </td>
                       <td className="p-4">
-                        <span className="font-medium text-slate-900">{purchase.price}</span>
+                        <span className="font-medium text-slate-900">₺{purchase.amount}</span>
                       </td>
                       <td className="p-4">
-                        <div className="text-sm text-slate-900">{purchase.date}</div>
-                        {purchase.nextBilling !== '-' && (
-                          <div className="text-xs text-slate-500">Sonraki: {purchase.nextBilling}</div>
+                        <div className="text-sm text-slate-900">{new Date(purchase.createdAt).toLocaleDateString('tr-TR')}</div>
+                        {purchase.expiresAt && (
+                          <div className="text-xs text-slate-500">Sonraki: {new Date(purchase.expiresAt).toLocaleDateString('tr-TR')}</div>
                         )}
                       </td>
                       <td className="p-4">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          purchase.status === 'active' 
+                          purchase.status === 'completed' 
                             ? 'bg-green-50 text-green-700'
+                            : purchase.status === 'pending'
+                            ? 'bg-yellow-50 text-yellow-700'
                             : 'bg-red-50 text-red-700'
                         }`}>
-                          {purchase.status === 'active' ? 'Aktif' : 'İptal Edildi'}
+                          {purchase.status === 'completed' ? 'Tamamlandı' : purchase.status === 'pending' ? 'Bekliyor' : 'İptal'}
                         </span>
                       </td>
                       <td className="p-4">
-                        <span className="text-sm text-slate-600">{purchase.paymentMethod}</span>
+                        <span className="text-sm text-slate-600">Kredi Kartı</span>
                       </td>
                     </tr>
                   ))}
@@ -356,40 +268,39 @@ export default function AdminPricingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {invoices.map((invoice) => (
+                  {(invoices || []).map((invoice) => (
                     <tr key={invoice.id} className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="p-4">
                         <span className="font-mono text-sm font-medium text-slate-900">{invoice.id}</span>
                       </td>
                       <td className="p-4">
-                        <span className="font-medium text-slate-900">{invoice.userName}</span>
+                        <span className="font-medium text-slate-900">Müşteri #{invoice.purchaseId.slice(0, 8)}</span>
                       </td>
                       <td className="p-4">
-                        <span className="text-sm text-slate-900">{invoice.packageName}</span>
+                        <span className="text-sm text-slate-900">Profesyonel Paket</span>
                       </td>
                       <td className="p-4">
-                        <span className="font-medium text-slate-900">{invoice.amount}</span>
+                        <span className="font-medium text-slate-900">₺{invoice.amount}</span>
                       </td>
                       <td className="p-4">
-                        <div className="text-sm text-slate-900">{invoice.date}</div>
-                        <div className="text-xs text-slate-500">Vade: {invoice.dueDate}</div>
+                        <div className="text-sm text-slate-900">{new Date(invoice.createdAt).toLocaleDateString('tr-TR')}</div>
+                        <div className="text-xs text-slate-500">Vade: {new Date(invoice.dueDate).toLocaleDateString('tr-TR')}</div>
                       </td>
                       <td className="p-4">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           invoice.status === 'paid' 
                             ? 'bg-green-50 text-green-700'
+                            : invoice.status === 'unpaid'
+                            ? 'bg-yellow-50 text-yellow-700'
                             : 'bg-red-50 text-red-700'
                         }`}>
-                          {invoice.status === 'paid' ? 'Ödendi' : 'Gecikmiş'}
+                          {invoice.status === 'paid' ? 'Ödendi' : invoice.status === 'unpaid' ? 'Bekliyor' : 'Gecikmiş'}
                         </span>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
                             <Download className="w-4 h-4" />
-                          </button>
-                          <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
-                            <FileText className="w-4 h-4" />
                           </button>
                         </div>
                       </td>

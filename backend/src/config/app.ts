@@ -5,7 +5,9 @@ dotenv.config();
 const nodeEnv = process.env.NODE_ENV || 'development';
 const appUrl = process.env.APP_URL || 'http://localhost:3000';
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
-const qrRootDomain = process.env.QR_ROOT_DOMAIN || '';
+const qrRootDomain = nodeEnv === 'development' 
+  ? 'localhost:3000' 
+  : (process.env.QR_ROOT_DOMAIN || 'netqr.io');
 const qrProtocol = process.env.QR_PROTOCOL || 'https';
 const qrBaseUrl = nodeEnv === 'development'
   ? appUrl

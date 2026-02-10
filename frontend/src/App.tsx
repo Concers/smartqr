@@ -28,6 +28,7 @@ export default function App() {
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/custom-domains" element={<AdminCustomDomainsPage />} />
       <Route path="/admin/subdomain-requests" element={<AdminSubdomainRequestsPage />} />
+      <Route path="/sub-users" element={<SubUserManagement />} />
       
       {/* Admin pages - With AdminLayout (no additional wrapper needed) */}
       <Route path="/qr/generate" element={
@@ -61,20 +62,11 @@ export default function App() {
           <AnalyticsPage />
         </ProtectedRoute>
       } />
-      <Route path="/pricing" element={
-        <ProtectedRoute adminOnly>
-          <AdminPricingPage />
-        </ProtectedRoute>
-      } />
+      <Route path="/pricing" element={<AdminPricingPage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/subdomain" element={
         <ProtectedRoute adminOnly>
           <SubdomainRequestPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/sub-users" element={
-        <ProtectedRoute>
-          <SubUserManagement />
         </ProtectedRoute>
       } />
       

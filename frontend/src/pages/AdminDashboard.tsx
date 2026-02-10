@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { AdminLayout } from '../components/Layout/AdminLayout';
 import { qrService } from '../services/qrService';
+import { analyticsService } from '../services/analyticsService';
 import { useAuth } from '../hooks/useAuth';
 import subUserService from '../services/subUserService';
 
@@ -46,6 +47,14 @@ export default function AdminDashboard() {
     enabled: true,
   });
 
+  // Fetch analytics overview data
+  const { data: analyticsData } = useQuery({
+    queryKey: ['analyticsOverview'],
+    queryFn: () => analyticsService.getOverview().then((r) => r.data),
+    enabled: true,
+    refetchOnWindowFocus: false,
+  });
+
   // Fetch sub-user statistics
   const { data: subUserData } = useQuery({
     queryKey: ['subUserStats'],
@@ -60,7 +69,7 @@ export default function AdminDashboard() {
     name: d.shortCode || `QR-${d.id}`,
     url: d.destinationUrl,
     type: 'Website', // Default type, can be enhanced based on URL
-    scans: Math.floor(Math.random() * 5000), // Placeholder until real scan data is available
+    scans: d.totalScans || 0, // Use real scan data from analytics
     status: d.isActive ? 'active' : 'paused',
     date: new Date(d.createdAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }),
     shortCode: d.shortCode,
@@ -68,13 +77,13 @@ export default function AdminDashboard() {
     qrCodeImageUrl: d.qrCodeImageUrl,
   }));
 
-  // Mock stats data (can be enhanced with real analytics)
+  // Real stats data from analytics
   const stats = {
     totalQRs: qrData?.data?.total || 0,
     activeQRs: recentQRCodes.filter((qr: any) => qr.status === 'active').length,
-    totalScans: recentQRCodes.reduce((sum: number, qr: any) => sum + qr.scans, 0),
-    thisMonthScans: Math.floor(recentQRCodes.reduce((sum: number, qr: any) => sum + qr.scans, 0) * 0.3), // Estimate
-    conversionRate: 24.5, // Mock data
+    totalScans: analyticsData?.totalScans || 0,
+    thisMonthScans: analyticsData?.thisMonthScans || 0,
+    conversionRate: analyticsData?.conversionRate || 0,
     totalSubUsers: subUserData?.total || 0,
     activeSubUsers: subUserData?.active || 0,
     inactiveSubUsers: subUserData?.inactive || 0,

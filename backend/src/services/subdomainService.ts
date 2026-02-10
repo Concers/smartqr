@@ -4,7 +4,7 @@ import crypto from 'crypto';
 const prisma = new PrismaClient();
 
 export class SubdomainService {
-  private readonly SUBDOMAIN_PREFIX = 'user-';
+  private readonly SUBDOMAIN_PREFIX = 'netqr-';
   private readonly SUBDOMAIN_LENGTH = 10;
   private readonly MAX_ATTEMPTS = 100;
 
@@ -32,9 +32,9 @@ export class SubdomainService {
    */
   generateSubdomainFromUserId(userId: string): string {
     // CUID formatı: cml28gmi70000la3ed8d9e2sd
-    // İlk 8-12 karakteri kullan (unique ve readable)
-    const shortId = userId.slice(0, 8).toLowerCase();
-    return shortId;
+    // İlk 10 karakteri al ve netqr- prefix ekle
+    const shortId = userId.slice(0, 10).toLowerCase();
+    return `${this.SUBDOMAIN_PREFIX}${shortId}`;
   }
 
   /**
@@ -186,7 +186,7 @@ export class SubdomainService {
    * Subdomain formatını validate eder
    */
   isValidSubdomainFormat(subdomain: string): boolean {
-    const pattern = /^user-[a-z0-9]{10}$/;
+    const pattern = /^netqr-[a-z0-9]{10}$/;
     return pattern.test(subdomain);
   }
 

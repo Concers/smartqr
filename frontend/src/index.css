@@ -65,10 +65,16 @@
     @apply border-border;
   }
   body {
-    @apply bg-cream text-dark font-sans;
+    @apply bg-background text-foreground font-sans;
+  }
+  .dark body {
+    @apply bg-background text-foreground;
   }
   ::selection {
-    @apply bg-yellow text-dark;
+    @apply bg-primary text-primary-foreground;
+  }
+  .dark ::selection {
+    @apply bg-primary text-primary-foreground;
   }
 }
 

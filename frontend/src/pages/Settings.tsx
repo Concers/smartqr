@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, Shield, Bell, Palette, Save, Eye, EyeOff, Moon, Sun, Monitor, Smartphone } from 'lucide-react';
 import { AdminLayout } from '../components/Layout/AdminLayout';
 import { useAuth } from '../hooks/useAuth';
@@ -133,6 +133,39 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab['id']>('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark' | 'auto'>('light');
+
+  // Apply theme to document
+  useEffect(() => {
+    const applyTheme = (theme: 'light' | 'dark' | 'auto') => {
+      const root = document.documentElement;
+      
+      if (theme === 'auto') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        root.classList.toggle('dark', prefersDark);
+      } else {
+        root.classList.toggle('dark', theme === 'dark');
+      }
+      
+      localStorage.setItem('theme', theme);
+    };
+
+    // Load saved theme from localStorage
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'auto' || 'light';
+    setCurrentTheme(savedTheme);
+    applyTheme(savedTheme);
+
+    // Listen for system theme changes when in auto mode
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      if (currentTheme === 'auto') {
+        applyTheme('auto');
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [currentTheme]);
 
   // Initialize settings managers
   const [profileManager] = useState(() => new ProfileSettingsManager({
@@ -167,13 +200,18 @@ export default function SettingsPage() {
   }));
 
   const [appearanceManager] = useState(() => new AppearanceSettingsManager({
-    theme: 'light',
+    theme: currentTheme,
     language: 'tr',
     timezone: 'Europe/Istanbul',
     dateFormat: 'DD.MM.YYYY',
     compactMode: false,
     showAnimations: true
   }));
+
+  // Update appearance manager when theme changes
+  useEffect(() => {
+    appearanceManager.updateField('theme', currentTheme);
+  }, [currentTheme, appearanceManager]);
 
   // Get current manager based on active tab
   const getCurrentManager = () => {
@@ -401,10 +439,26 @@ export default function SettingsPage() {
   const renderAppearanceTab = () => {
     const data = appearanceManager.getData();
     
+    const handleThemeChange = (theme: 'light' | 'dark' | 'auto') => {
+      appearanceManager.updateField('theme', theme);
+      setCurrentTheme(theme);
+      
+      // Apply theme immediately
+      const root = document.documentElement;
+      if (theme === 'auto') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        root.classList.toggle('dark', prefersDark);
+      } else {
+        root.classList.toggle('dark', theme === 'dark');
+      }
+      
+      localStorage.setItem('theme', theme);
+    };
+    
     return (
       <div className="space-y-6">
         <div className="space-y-4">
-          <h3 className="text-lg font-medium text-slate-900">Tema</h3>
+          <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">Tema</h3>
           <div className="grid grid-cols-3 gap-4">
             {[
               { value: 'light', label: 'Açık', icon: Sun },
@@ -413,11 +467,11 @@ export default function SettingsPage() {
             ].map(({ value, label, icon: Icon }) => (
               <button
                 key={value}
-                onClick={() => appearanceManager.updateField('theme', value as typeof data.theme)}
+                onClick={() => handleThemeChange(value as typeof data.theme)}
                 className={`p-4 border rounded-lg flex flex-col items-center space-y-2 transition-colors ${
                   data.theme === value
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-slate-200 hover:border-slate-300'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/20 dark:text-blue-300'
+                    : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600 dark:hover:bg-slate-700'
                 }`}
               >
                 <Icon className="h-6 w-6" />
@@ -526,21 +580,21 @@ export default function SettingsPage() {
 
           {/* Content */}
           <div className="lg:col-span-3">
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-              <div className="p-6 border-b border-slate-200">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="p-6 border-b border-slate-200 dark:border-slate-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                       {SETTINGS_TABS.find(tab => tab.id === activeTab)?.label}
                     </h2>
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                       {SETTINGS_TABS.find(tab => tab.id === activeTab)?.description}
                     </p>
                   </div>
                   <div className="flex gap-3">
                     <button
                       onClick={handleReset}
-                      className="px-4 py-2 text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                      className="px-4 py-2 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                     >
                       Sıfırla
                     </button>
