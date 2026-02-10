@@ -121,3 +121,6 @@ dump.rdb
 backend/uploads
 backend/uploads/qr/deneme.png
 backend/.env
+
+# Yedek klasörü (GitHub'a gönderilmez)
+yedek/
