@@ -22,6 +22,12 @@ model User {
   subdomainRequests    SubdomainRequest[]
   qrCodes              QrCode[]
   subUsers             SubUser[]      // Parent relationship: User -> SubUser
+  multiLinks           MultiLink[]    // Faz 2: Multi-link functionality
+  menus                Menu[]         // Faz 2: Digital menu functionality
+  coupons              Coupon[]       // Faz 2: Coupon system functionality
+  couponUsages         CouponUsage[]  // Faz 2: Coupon usage tracking
+  calendars            Calendar[]     // Faz 2: Calendar functionality
+  reviewPlatforms      ReviewPlatform[] // Faz 2: Multi-platform review functionality
 
   @@map("users")
 }
@@ -73,19 +79,31 @@ model SubUser {
 model QrCode {
   id                  String           @id @default(cuid())
   shortCode           String           @unique
-  originalUrl         String?
+  type                String           @default("url") // url, text, wifi, vcard, facebook, instagram, twitter, youtube, linkedin, tiktok, email, phone, sms, whatsapp, pdf, video, gallery, google-docs, google-forms, google-sheets, map, emergency-location, car-sticker, pet-id, multi-link, google-review, digital-menu, coupon, calendar, review-platform
+  originalUrl         String?          // Legacy field for backward compatibility
+  content             Json?            // Type-specific content data (vCard, social media info, etc.)
+  settings            Json?            // QR code appearance settings (colors, logo, size, etc.)
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
   isActive            Boolean          @default(true)
   userId              String?
-  qrImageUrl          String?
   customDomainEnabled Boolean          @default(false)
   customUrl           String?
   lockedSubdomain     String?          // Locks this QR to a specific subdomain permanently
+  expiresAt           DateTime?        // QR code expiration date
   analytics           QrAnalytics[]
   user                User?            @relation(fields: [userId], references: [id])
   destinations        UrlDestination[]
+  multiLink           MultiLink?       // Faz 2: Multi-link functionality (one-to-one)
+  menu                Menu?            // Faz 2: Digital menu functionality (one-to-one)
+  coupon              Coupon?          // Faz 2: Coupon system functionality (one-to-one)
+  calendar            Calendar?        // Faz 2: Calendar functionality (one-to-one)
+  reviewPlatform      ReviewPlatform?  // Faz 2: Multi-platform review functionality (one-to-one)
 
+  @@index([userId])
+  @@index([type])
+  @@index([isActive])
+  @@index([createdAt])
   @@map("qr_codes")
 }
 
@@ -100,6 +118,224 @@ model UrlDestination {
   qrCode         QrCode    @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
 
   @@map("url_destinations")
+}
+
+// Multi-link Models for Faz 2
+model MultiLink {
+  id          String   @id @default(cuid())
+  qrCodeId    String   @unique
+  title       String
+  description String?
+  theme       Json     // Theme settings (colors, fonts, layout)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String
+  
+  // Relations
+  qrCode      QrCode       @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links       MultiLinkItem[]
+  analytics   LinkAnalytics[]
+
+  @@index([userId])
+  @@index([isActive])
+  @@map("multi_links")
+}
+
+model MultiLinkItem {
+  id          String   @id @default(cuid())
+  multiLinkId String
+  title       String
+  url         String
+  description String?
+  icon        String?  // Icon name or URL
+  order       Int      @default(0) // For drag-and-drop ordering
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  multiLink   MultiLink @relation(fields: [multiLinkId], references: [id], onDelete: Cascade)
+  analytics   LinkAnalytics[]
+
+  @@index([multiLinkId])
+  @@index([order])
+  @@index([isActive])
+  @@map("multi_link_items")
+}
+
+model LinkAnalytics {
+  id           String   @id @default(cuid())
+  multiLinkId  String?
+  linkItemId   String?  // For individual link tracking
+  qrCodeId     String?  // For overall QR tracking
+  ipAddress    String?
+  userAgent    String?
+  country      String?
+  city         String?
+  deviceType   String?
+  browser      String?
+  referrer     String?
+  accessedAt   DateTime @default(now())
+  
+  // Relations
+  multiLink    MultiLink?      @relation(fields: [multiLinkId], references: [id], onDelete: Cascade)
+  linkItem     MultiLinkItem?  @relation(fields: [linkItemId], references: [id], onDelete: Cascade)
+
+  @@index([multiLinkId])
+  @@index([linkItemId])
+  @@index([qrCodeId])
+  @@index([accessedAt])
+  @@map("link_analytics")
+}
+
+// Digital Menu Models for Faz 2
+model Menu {
+  id          String   @id @default(cuid())
+  qrCodeId    String   @unique
+  title       String
+  description String?
+  currency    String   @default("TRY")
+  isActive    Boolean  @default(true)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  qrCode      QrCode   @relation(fields: [qrCodeId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+  items       MenuItem[]
+  
+  @@index([userId])
+  @@index([isActive])
+  @@map("menus")
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  menuId      String
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  category    String?  // Örn: "Yemekler", "İçecekler", "Tatlılar"
+  imageUrl    String?
+  allergens   String[] // Alerjen bilgileri
+  isAvailable Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  menu        Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  
+  @@index([menuId])
+  @@index([category])
+  @@index([isAvailable])
+  @@map("menu_items")
+}
+
+// Coupon System Models for Faz 2
+model Coupon {
+  id              String    @id @default(cuid())
+  qrCodeId        String    @unique
+  code            String    @unique
+  title           String
+  description     String?
+  discountType    String    @default("percentage") // percentage, fixed
+  discountValue   Decimal   @db.Decimal(10, 2)
+  minAmount       Decimal?  @db.Decimal(10, 2) // Minimum purchase amount
+  maxDiscount     Decimal?  @db.Decimal(10, 2) // Maximum discount amount
+  usageLimit      Int?      // Total usage limit
+  usagePerUser    Int?      // Per user usage limit
+  isActive        Boolean   @default(true)
+  validFrom       DateTime  @default(now())
+  validUntil      DateTime?
+  userId          String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  qrCode          QrCode    @relation(fields: [qrCodeId], references: [id])
+  user            User      @relation(fields: [userId], references: [id])
+  usages          CouponUsage[]
+  
+  @@index([userId])
+  @@index([code])
+  @@index([isActive])
+  @@index([validFrom, validUntil])
+  @@map("coupons")
+}
+
+model CouponUsage {
+  id        String   @id @default(cuid())
+  couponId  String
+  userId    String
+  usedAt    DateTime @default(now())
+  orderId   String?  // Reference to order if applicable
+  amount    Decimal  @db.Decimal(10, 2) // Purchase amount
+  
+  // Relations
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@index([couponId])
+  @@index([userId])
+  @@index([usedAt])
+  @@map("coupon_usages")
+}
+
+// Calendar Model for Faz 2
+model Calendar {
+  id          String   @id @default(cuid())
+  qrCodeId    String   @unique
+  title       String
+  description String?
+  location    String?
+  startTime   DateTime
+  endTime     DateTime
+  isAllDay    Boolean  @default(false)
+  timezone    String   @default("Europe/Istanbul")
+  reminder    String?  // "15m", "1h", "1d" etc.
+  attendees   String[] // Email addresses
+  isActive    Boolean  @default(true)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  qrCode      QrCode   @relation(fields: [qrCodeId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([isActive])
+  @@index([startTime])
+  @@map("calendars")
+}
+
+// Multi-platform Review Model for Faz 2
+model ReviewPlatform {
+  id          String   @id @default(cuid())
+  qrCodeId    String   @unique
+  platform    String   // yelp, tripadvisor, google, facebook
+  businessId  String   // Platform-specific business ID
+  businessName String
+  location    String?  // Business address/location
+  rating      Decimal? @db.Decimal(3, 2) // Current rating
+  reviewCount Int?     // Total review count
+  isActive    Boolean  @default(true)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  qrCode      QrCode   @relation(fields: [qrCodeId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([platform])
+  @@index([isActive])
+  @@map("review_platforms")
 }
 
 model QrAnalytics {

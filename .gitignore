@@ -117,6 +117,15 @@ prisma/migrations/dev.db*
 # Redis dump
 dump.rdb
 
+# Database backups
+*.sql
+*.sql.gz
+backups/
+var/backups/
+
+# Backup logs
+/var/log/smartqr-backup.log
+
 
 backend/uploads
 backend/uploads/qr/deneme.png

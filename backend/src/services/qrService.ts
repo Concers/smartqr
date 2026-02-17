@@ -40,49 +40,152 @@ export class QRService {
     // Use user's current subdomain (ID-based or custom)
     const userSubdomain = user?.subdomain || 'default';
 
+    // Generate QR content based on type
+    const qrContent = this.generateQRContent(data.type, data.content, data.settings);
+
     const qrCode = await prisma.qrCode.create({
       data: {
         shortCode,
-        originalUrl: data.destinationUrl,
+        type: data.type || 'url',
+        originalUrl: data.type === 'url' ? (data.content?.url || data.destinationUrl) : null,
+        content: data.content || {},
+        settings: data.settings || {},
         userId,
         lockedSubdomain: userSubdomain,
-        destinations: {
-          create: {
-            destinationUrl: data.destinationUrl,
-            expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+        // For backward compatibility, keep destinations for URL type
+        ...(data.type === 'url' && {
+          destinations: {
+            create: {
+              destinationUrl: data.content?.url || data.destinationUrl,
+              expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+            },
           },
-        },
+        }),
+        // Create multi-link for multi-link type
+        ...(data.type === 'multi-link' && {
+          multiLink: {
+            create: {
+              title: data.content?.title || 'My Links',
+              description: data.content?.description,
+              theme: data.content?.theme || {},
+              userId,
+              links: {
+                create: (data.content?.links || []).map((link: any, index: number) => ({
+                  title: link.title,
+                  url: link.url,
+                  description: link.description,
+                  icon: link.icon,
+                  order: link.order ?? index
+                }))
+              }
+            }
+          }
+        }),
+        // Create digital menu for digital-menu type
+        ...(data.type === 'digital-menu' && {
+          menu: {
+            create: {
+              title: data.content?.title || 'Menü',
+              description: data.content?.description,
+              currency: data.content?.currency || 'TRY',
+              user: {
+                connect: {
+                  id: userId
+                }
+              }
+            }
+          }
+        }),
+        // Create coupon for coupon type
+        ...(data.type === 'coupon' && {
+          coupon: {
+            create: {
+              code: this.generateCouponCode(),
+              title: data.content?.title || 'İndirim Kuponu',
+              description: data.content?.description,
+              discountType: data.content?.discountType || 'percentage',
+              discountValue: data.content?.discountValue || 0,
+              minAmount: data.content?.minAmount,
+              maxDiscount: data.content?.maxDiscount,
+              usageLimit: data.content?.usageLimit,
+              usagePerUser: data.content?.usagePerUser,
+              validFrom: data.content?.validFrom ? new Date(data.content.validFrom) : new Date(),
+              validUntil: data.content?.validUntil ? new Date(data.content.validUntil) : null,
+              user: {
+                connect: {
+                  id: userId
+                }
+              }
+            }
+          }
+        }),
+        // Create calendar for calendar type
+        ...(data.type === 'calendar' && {
+          calendar: {
+            create: {
+              title: data.content?.title || 'Etkinlik',
+              description: data.content?.description,
+              location: data.content?.location,
+              startTime: new Date(data.content?.startTime),
+              endTime: new Date(data.content?.endTime),
+              isAllDay: data.content?.isAllDay || false,
+              timezone: data.content?.timezone || 'Europe/Istanbul',
+              reminder: data.content?.reminder,
+              attendees: data.content?.attendees || [],
+              user: {
+                connect: {
+                  id: userId
+                }
+              }
+            }
+          }
+        }),
+        // Create review platform for review-platform type
+        ...(data.type === 'review-platform' && {
+          reviewPlatform: {
+            create: {
+              platform: data.content?.platform,
+              businessId: data.content?.businessId,
+              businessName: data.content?.businessName,
+              location: data.content?.location,
+              rating: data.content?.rating,
+              reviewCount: data.content?.reviewCount,
+              user: {
+                connect: {
+                  id: userId
+                }
+              }
+            }
+          }
+        }),
       },
     });
 
     const qrCodeUrl = `${config.qr.protocol}://${userSubdomain}.${config.qr.rootDomain}/${shortCode}`;
 
-    // WiFi payloads must be encoded directly into the QR image (not via short URL redirect)
-    // because phones need to see the raw WIFI: string to trigger the "Join Network" prompt.
-    const isWifi = data.destinationUrl.toUpperCase().startsWith('WIFI:');
-    const qrContent = isWifi ? data.destinationUrl : qrCodeUrl;
+    // For non-URL types, encode content directly in QR
+    const finalQRContent = this.shouldEncodeDirectly(data.type) ? qrContent : qrCodeUrl;
 
-    const qrPng = await QRGenerator.generateQRCodePngBuffer(qrContent);
+    const qrPng = await QRGenerator.generateQRCodePngBuffer(finalQRContent, data.settings);
     const stored = await storage.savePng({
       key: `qr/${shortCode}.png`,
       buffer: qrPng,
     });
 
-    await prisma.qrCode.update({
-      where: { id: qrCode.id },
-      data: { qrImageUrl: stored.publicUrl },
-    });
-
     return {
       id: qrCode.id,
       shortCode,
-      qrCodeUrl: isWifi ? qrContent : qrCodeUrl,
+      type: data.type || 'url',
+      content: data.content || {},
+      settings: data.settings || {},
+      qrCodeUrl: this.shouldEncodeDirectly(data.type) ? qrContent : qrCodeUrl,
       qrCodeImageUrl: stored.publicUrl,
-      destinationUrl: data.destinationUrl,
+      destinationUrl: data.type === 'url' ? (data.content?.url || data.destinationUrl) : null,
       createdAt: qrCode.createdAt.toISOString(),
       expiresAt: data.expiresAt,
       isActive: qrCode.isActive,
-      customSubdomain: userSubdomain,
+      userId: qrCode.userId,
     };
   }
 
@@ -323,5 +426,191 @@ export class QRService {
     }
 
     return { status: 'active', destinationUrl };
+  }
+
+  private static generateQRContent(type: string, content: any, settings?: any): string {
+    switch (type) {
+      case 'text':
+        return content?.text || '';
+      
+      case 'email':
+        const emailParts = [
+          `mailto:${content?.to || ''}`,
+          content?.subject ? `?subject=${encodeURIComponent(content.subject)}` : '',
+          content?.body ? `&body=${encodeURIComponent(content.body)}` : '',
+        ].join('');
+        return emailParts;
+
+      case 'phone':
+        return `tel:${content?.phone || ''}`;
+
+      case 'sms':
+        const smsParts = [
+          `smsto:${content?.phone || ''}`,
+          content?.message ? `?body=${encodeURIComponent(content.message)}` : '',
+        ].join('');
+        return smsParts;
+
+      case 'whatsapp':
+        const phone = content?.phone?.replace(/[^\d]/g, '') || '';
+        const message = content?.message ? encodeURIComponent(content.message) : '';
+        return `https://wa.me/${phone}${message ? '?text=' + message : ''}`;
+
+      case 'wifi':
+        const wifiParts = [
+          'WIFI:T:',
+          content?.encryption || 'WPA',
+          ';S:',
+          content?.ssid || '',
+          ';P:',
+          content?.password || '',
+          ';H:',
+          content?.hidden ? 'true' : 'false',
+          ';;'
+        ];
+        return wifiParts.join('');
+
+      case 'vcard':
+        return this.generateVCard(content);
+
+      case 'map':
+        return `geo:${content?.latitude || 0},${content?.longitude || 0}`;
+
+      case 'instagram':
+        return `https://instagram.com/${content?.username || ''}`;
+
+      case 'facebook':
+        return content?.url || '';
+
+      case 'twitter':
+        return `https://twitter.com/${content?.username || ''}`;
+
+      case 'youtube':
+        return content?.url || '';
+
+      case 'linkedin':
+        return content?.url || '';
+
+      case 'tiktok':
+        return `https://tiktok.com/@${content?.username || ''}`;
+
+      case 'multi-link':
+        return content?.url || '';
+
+      case 'google-review':
+        return `https://search.google.com/local/writereview?placeid=${content?.placeId || ''}`;
+
+      case 'digital-menu':
+        return content?.url || '';
+
+      case 'coupon':
+        return content?.url || '';
+
+      case 'calendar':
+        return this.generateICSContent(content);
+
+      case 'review-platform':
+        return this.generateReviewPlatformURL(content);
+
+      default:
+        return content?.url || '';
+    }
+  }
+
+  private static generateVCard(content: any): string {
+    const vcard = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      `FN:${content?.name || ''}`,
+      `ORG:${content?.company || ''}`,
+      `TITLE:${content?.title || ''}`,
+      `TEL:${content?.phone || ''}`,
+      `EMAIL:${content?.email || ''}`,
+      `URL:${content?.website || ''}`,
+      `ADR:;;${content?.address || ''};;;;`,
+      'END:VCARD'
+    ];
+    return vcard.join('\n');
+  }
+
+  private static generateCouponCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
+  private static generateICSContent(content: any): string {
+    const formatDate = (date: Date) => {
+      return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    };
+
+    const now = new Date();
+    const startTime = new Date(content?.startTime || now);
+    const endTime = new Date(content?.endTime || new Date(now.getTime() + 60 * 60 * 1000));
+
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//SmartQR//Calendar Event//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      `UID:${Date.now()}-calendar@smartqr.io`,
+      `DTSTART:${formatDate(startTime)}`,
+      `DTEND:${formatDate(endTime)}`,
+      `DTSTAMP:${formatDate(now)}`,
+      `SUMMARY:${content?.title || 'Event'}`,
+      `DESCRIPTION:${content?.description || ''}`,
+      `LOCATION:${content?.location || ''}`,
+      'STATUS:CONFIRMED'
+    ];
+
+    if (content?.attendees && content.attendees.length > 0) {
+      content.attendees.forEach((email: string) => {
+        ics.push(`ATTENDEE:mailto:${email}`);
+      });
+    }
+
+    if (content?.reminder) {
+      ics.push('BEGIN:VALARM');
+      ics.push('ACTION:DISPLAY');
+      ics.push('DESCRIPTION:Reminder');
+      ics.push(`TRIGGER:-${content.reminder}`);
+      ics.push('END:VALARM');
+    }
+
+    ics.push('END:VEVENT');
+    ics.push('END:VCALENDAR');
+
+    return ics.join('\r\n');
+  }
+
+  private static generateReviewPlatformURL(content: any): string {
+    const platform = content?.platform?.toLowerCase();
+    const businessId = content?.businessId;
+
+    switch (platform) {
+      case 'yelp':
+        return `https://www.yelp.com/writeareview?bizid=${businessId}`;
+      
+      case 'tripadvisor':
+        return `https://www.tripadvisor.com/UserReview-g${businessId}`;
+      
+      case 'google':
+        return `https://search.google.com/local/writereview?placeid=${businessId}`;
+      
+      case 'facebook':
+        return `https://www.facebook.com/${businessId}/reviews`;
+      
+      default:
+        return content?.url || '';
+    }
+  }
+
+  private static shouldEncodeDirectly(type: string): boolean {
+    return ['wifi', 'vcard', 'email', 'phone', 'sms', 'whatsapp', 'map', 'text', 'calendar'].includes(type);
   }
 }
